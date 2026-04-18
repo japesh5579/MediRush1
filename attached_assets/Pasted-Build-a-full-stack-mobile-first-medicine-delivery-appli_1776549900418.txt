@@ -1,0 +1,203 @@
+Build a full-stack mobile-first medicine delivery application named **"Medirush"**, similar to Blinkit (10-minute delivery concept). The project should be production-ready, cleanly structured, and easily deployable. I will export this project to GitHub, so maintain proper folder structure, README, and environment configs.
+
+## 🔧 Tech Stack
+
+* Frontend: React Native (Expo) OR Next.js (mobile responsive if RN not possible)
+* Backend: Node.js + Express
+* Database: MongoDB (Mongoose)
+* Authentication: JWT-based auth
+* File Upload: Cloudinary or local storage (for prescription uploads)
+
+---
+
+## 🎨 UI/UX Requirements
+
+### 1. Splash Screen
+
+* Green theme (#00C853 or similar)
+* Display:
+
+  * App Name: **Medirush**
+  * Logo: Plus (+) medical sign
+  * Tagline: "10-Minute Medicine Delivery"
+
+---
+
+## 🔐 Authentication System
+
+### Common Login Screen (for both User & Owner)
+
+* Fields:
+
+  * Email or Phone Number
+  * Password
+* Detect role:
+
+  * If credentials belong to Owner → redirect to Owner Dashboard
+  * Else → User Dashboard
+
+---
+
+### 📝 Signup Screen (New Users)
+
+Collect:
+
+* Full Name
+* Phone Number
+* Email ID
+* Password
+* Location (manual entry + optional GPS)
+
+Validation required.
+
+---
+
+## 👤 USER FEATURES
+
+### 🏠 User Dashboard
+
+* Search bar (top)
+* Categories (scrollable)
+* Medicine listing:
+
+  * Image
+  * Name
+  * Price
+  * Add to Cart button
+
+---
+
+### 🔍 Search
+
+* Real-time medicine search
+* Filter by category
+
+---
+
+### 🛒 Cart System
+
+* Add/remove items
+* Quantity control
+* Total price calculation
+
+---
+
+### 📄 Prescription Upload
+
+* Upload image (camera/gallery)
+* Optional step before checkout
+* Continue button (no strict validation required)
+
+---
+
+### 💳 Checkout & Payment
+
+* Show delivery ETA (10–20 minutes)
+
+Payment Options:
+
+1. Cash on Delivery
+2. UPI Payment
+
+For UPI:
+
+* Provide placeholders:
+
+  * UPI ID (editable in config)
+  * QR Code image (admin configurable)
+
+---
+
+### 📦 Order Confirmation
+
+* Show:
+
+  * Order placed successfully
+  * Estimated delivery time (10–20 min)
+
+---
+
+## 🧑‍💼 OWNER FEATURES
+
+### Owner Dashboard
+
+* Add Medicine:
+
+  * Name, Price, Category, Image
+* Delete Medicine
+* Edit Medicine
+* Manage Categories:
+
+  * Add/Delete categories
+
+---
+
+## 🗂️ Backend Requirements
+
+Create APIs for:
+
+* Auth (login/signup)
+* Medicines (CRUD)
+* Categories
+* Cart
+* Orders
+* Prescription upload
+
+Use proper MVC structure.
+
+---
+
+## 🔒 Role-Based Access
+
+* User vs Owner authorization middleware
+
+---
+
+## ⚙️ CONFIGURATION
+
+Create a `.env` file with:
+
+* MONGO_URI
+* JWT_SECRET
+* CLOUDINARY_KEYS (if used)
+* UPI_ID (for payments)
+* QR_CODE_IMAGE_URL
+
+---
+
+## 📁 Project Structure
+
+* /client (frontend)
+* /server (backend)
+* Clean modular architecture
+
+---
+
+## 📘 README.md
+
+Include:
+
+* Setup instructions
+* Environment variables
+* Run commands
+* Deployment guide
+
+---
+
+## 🎯 Extra Features (Optional but preferred)
+
+* Loading animations
+* Toast notifications
+* Clean modern UI (glassmorphism or Blinkit-style)
+* Error handling
+
+---
+
+## 🚀 Output Expectation
+
+* Fully working code
+* Ready to run locally
+* GitHub-friendly (no broken dependencies)
+* Minimal bugs
+
+---

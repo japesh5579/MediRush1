@@ -1,20 +1,54 @@
-// Export your models here. Add one export per file
-// export * from "./posts";
-//
-// Each model/table should ideally be split into different files.
-// Each model/table should define a Drizzle table, insert schema, and types:
-//
-//   import { pgTable, text, serial } from "drizzle-orm/pg-core";
-//   import { createInsertSchema } from "drizzle-zod";
-//   import { z } from "zod/v4";
-//
-//   export const postsTable = pgTable("posts", {
-//     id: serial("id").primaryKey(),
-//     title: text("title").notNull(),
-//   });
-//
-//   export const insertPostSchema = createInsertSchema(postsTable).omit({ id: true });
-//   export type InsertPost = z.infer<typeof insertPostSchema>;
-//   export type Post = typeof postsTable.$inferSelect;
+import { doublePrecision, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
-export {}
+export const usersTable = pgTable("medirush_users", {
+  id: text("id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  phone: text("phone").notNull().unique(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  location: text("location").notNull(),
+  role: text("role").notNull().default("user"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const categoriesTable = pgTable("medirush_categories", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const medicinesTable = pgTable("medirush_medicines", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  price: doublePrecision("price").notNull(),
+  categoryId: text("category_id").notNull(),
+  imageUrl: text("image_url").notNull(),
+  description: text("description").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const cartItemsTable = pgTable("medirush_cart_items", {
+  id: text("id").primaryKey(),
+  medicineId: text("medicine_id").notNull(),
+  quantity: integer("quantity").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const prescriptionsTable = pgTable("medirush_prescriptions", {
+  id: text("id").primaryKey(),
+  fileName: text("file_name").notNull(),
+  imageUrl: text("image_url").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const ordersTable = pgTable("medirush_orders", {
+  id: text("id").primaryKey(),
+  items: jsonb("items").notNull(),
+  total: doublePrecision("total").notNull(),
+  paymentMethod: text("payment_method").notNull(),
+  status: text("status").notNull(),
+  etaMinutes: integer("eta_minutes").notNull(),
+  prescriptionId: text("prescription_id"),
+  deliveryAddress: text("delivery_address").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

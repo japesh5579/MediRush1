@@ -40,7 +40,7 @@ app.use("/api", router);
 const frontendDist = path.resolve(_dirname, "../../medirush/dist/public");
 if (existsSync(frontendDist)) {
   app.use(express.static(frontendDist));
-  app.get("*", (_req, res) => res.sendFile(path.join(frontendDist, "index.html")));
+  app.use((_req, res) => res.sendFile(path.join(frontendDist, "index.html")));
 }
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

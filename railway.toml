@@ -1,0 +1,6 @@
+[build]
+buildCommand = "pnpm install && cd artifacts/medirush && pnpm run build && cd ../api-server && pnpm run build"
+
+[deploy]
+startCommand = "node artifacts/api-server/dist/index.mjs"
+healthcheckPath = "/api/healthz"

@@ -146,6 +146,12 @@ export interface Order {
   prescriptionId?: string;
   deliveryAddress: string;
   createdAt: string;
+  customerName?: string;
+  customerPhone?: string;
+}
+
+export interface UpdateOrderStatusRequest {
+  status: string;
 }
 
 export interface DashboardSummary {

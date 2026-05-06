@@ -559,6 +559,10 @@ components:
           type: string
         createdAt:
           type: string
+        customerName:
+          type: string
+        customerPhone:
+          type: string
       required: [id, items, total, paymentMethod, status, etaMinutes, deliveryAddress, createdAt]
     DashboardSummary:
       type: object

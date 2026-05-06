@@ -18,4 +18,6 @@ export interface Order {
   prescriptionId?: string;
   deliveryAddress: string;
   createdAt: string;
+  customerName?: string;
+  customerPhone?: string;
 }

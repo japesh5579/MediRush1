@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { Activity, DollarSign, Edit3, ListOrdered, LogOut, Package, Plus, Tags, Trash2 } from "lucide-react";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
-import { getGetDashboardSummaryQueryKey, getListCategoriesQueryKey, getListMedicinesQueryKey, getListOrdersQueryKey, Medicine, useCreateCategory, useCreateMedicine, useDeleteCategory, useDeleteMedicine, useGetDashboardSummary, useListCategories, useListMedicines, useListOrders, useUpdateMedicine } from "@workspace/api-client-react";
+import { getGetDashboardSummaryQueryKey, getListCategoriesQueryKey, getListMedicinesQueryKey, getListOrdersQueryKey, Medicine, useCreateCategory, useCreateMedicine, useDeleteCategory, useDeleteMedicine, useGetDashboardSummary, useListCategories, useListMedicines, useListOrders, useUpdateMedicine, useUpdateOrderStatus } from "@workspace/api-client-react";
 
 const emptyMedicine = { name: "", price: "", categoryId: "", imageUrl: "", description: "" };
 const money = (value: number) => `₹${value.toFixed(0)}`;
@@ -25,7 +25,50 @@ export default function OwnerDashboard() {
   const { data: summary, isLoading } = useGetDashboardSummary();
   const { data: medicines } = useListMedicines();
   const { data: categories } = useListCategories();
-  const { data: orders } = useListOrders();
+  const { data: orders } = useListOrders({ query: { refetchInterval: 12000 } });
+
+  const prevOrderCount = useRef<number | null>(null);
+
+  function playAlertSound() {
+    try {
+      const ctx = new AudioContext();
+      const times = [0, 0.18, 0.36];
+      times.forEach((t) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.4, ctx.currentTime + t);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.15);
+        osc.start(ctx.currentTime + t);
+        osc.stop(ctx.currentTime + t + 0.15);
+      });
+    } catch {}
+  }
+
+  useEffect(() => {
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!orders) return;
+    const count = orders.length;
+    if (prevOrderCount.current !== null && count > prevOrderCount.current) {
+      const newest = orders[orders.length - 1];
+      playAlertSound();
+      toast({ title: "New order received!", description: `${newest.customerName ?? "Customer"} · ₹${newest.total.toFixed(0)}` });
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        new Notification("Medirush — New Order!", {
+          body: `${newest.customerName ?? "Customer"} ordered ₹${newest.total.toFixed(0)}`,
+          icon: "/favicon.ico",
+        });
+      }
+    }
+    prevOrderCount.current = count;
+  }, [orders?.length]);
 
   const refreshOwnerData = () => {
     queryClient.invalidateQueries({ queryKey: getListMedicinesQueryKey() });
@@ -39,6 +82,7 @@ export default function OwnerDashboard() {
   const deleteMedicine = useDeleteMedicine({ mutation: { onSuccess: () => { refreshOwnerData(); toast({ title: "Medicine deleted", description: "Item removed from catalogue." }); } } });
   const createCategory = useCreateCategory({ mutation: { onSuccess: () => { refreshOwnerData(); setCategoryName(""); toast({ title: "Category added", description: "Category is ready for medicines." }); } } });
   const deleteCategory = useDeleteCategory({ mutation: { onSuccess: refreshOwnerData } });
+  const updateOrderStatus = useUpdateOrderStatus({ mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() }) } });
 
   const handleLogout = () => {
     logout();
@@ -189,13 +233,34 @@ export default function OwnerDashboard() {
               <CardTitle>Recent orders</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {orders?.length ? orders.slice(-5).reverse().map((order) => (
-                <div key={order.id} className="rounded-2xl bg-slate-50 p-3">
-                  <p className="font-bold">{money(order.total)} · {order.paymentMethod.toUpperCase()}</p>
-                  <p className="text-sm text-slate-500">{order.status}, ETA {order.etaMinutes} min</p>
-                  <p className="mt-1 truncate text-xs text-slate-400">{order.deliveryAddress}</p>
-                </div>
-              )) : <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">No orders yet.</p>}
+              {orders?.length ? orders.slice().reverse().map((order) => {
+                const statusColor = order.status === "Delivered" ? "bg-green-100 text-green-700" : order.status === "Out for Delivery" ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700";
+                return (
+                  <div key={order.id} className="rounded-2xl bg-slate-50 p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-bold">{money(order.total)} · {order.paymentMethod.toUpperCase()}</p>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${statusColor}`}>{order.status}</span>
+                    </div>
+                    {order.customerName && (
+                      <p className="text-sm font-medium text-slate-700">{order.customerName}</p>
+                    )}
+                    {order.customerPhone && (
+                      <a href={`tel:${order.customerPhone}`} className="block text-sm text-emerald-600 hover:underline">{order.customerPhone}</a>
+                    )}
+                    <p className="truncate text-xs text-slate-400">{order.deliveryAddress}</p>
+                    {order.status === "Placed" && (
+                      <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={() => updateOrderStatus.mutate({ id: order.id, data: { status: "Out for Delivery" } })}>
+                        Start Delivery
+                      </Button>
+                    )}
+                    {order.status === "Out for Delivery" && (
+                      <Button size="sm" className="w-full bg-green-600 hover:bg-green-700 text-white" onClick={() => updateOrderStatus.mutate({ id: order.id, data: { status: "Delivered" } })}>
+                        Mark Delivered
+                      </Button>
+                    )}
+                  </div>
+                );
+              }) : <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">No orders yet.</p>}
             </CardContent>
           </Card>
         </section>

@@ -51,12 +51,22 @@ function readToken(req: Request) {
   return payload;
 }
 
+function requireUser(req: Request, res: Response): string | null {
+  const token = readToken(req);
+  if (!token) {
+    res.status(401).json({ message: "Authentication required" });
+    return null;
+  }
+  return token.id;
+}
+
 function requireOwner(req: Request, res: Response) {
   const token = readToken(req);
-  if (!token) return true;
-  if (token.role === "owner") return true;
-  res.status(403).json({ message: "Owner access required" });
-  return false;
+  if (!token || token.role !== "owner") {
+    res.status(403).json({ message: "Owner access required" });
+    return false;
+  }
+  return true;
 }
 
 function serializeUser(user: typeof usersTable.$inferSelect) {
@@ -119,11 +129,13 @@ async function ensureSeedData() {
   ]);
 }
 
-const ready = ensureSeedData();
+const ready = ensureSeedData().catch((err) => {
+  console.warn("Database seed skipped (DB may be unavailable):", err?.message ?? err, err?.cause ?? "");
+});
 
-async function getCartPayload() {
+async function getCartPayload(userId: string) {
   const [cartRows, medicines, categories] = await Promise.all([
-    db.select().from(cartItemsTable),
+    db.select().from(cartItemsTable).where(eq(cartItemsTable.userId, userId)),
     db.select().from(medicinesTable),
     db.select().from(categoriesTable),
   ]);
@@ -229,41 +241,51 @@ router.delete("/categories/:id", async (req, res) => {
   res.status(204).send();
 });
 
-router.get("/cart", async (_req, res) => {
-  res.json(await getCartPayload());
+router.get("/cart", async (req, res) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  res.json(await getCartPayload(userId));
 });
 
 router.post("/cart", async (req, res) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
   const body = AddCartItemBody.parse(req.body);
-  const existing = await db.select().from(cartItemsTable).where(eq(cartItemsTable.medicineId, body.medicineId)).limit(1);
+  const existing = await db.select().from(cartItemsTable).where(and(eq(cartItemsTable.userId, userId), eq(cartItemsTable.medicineId, body.medicineId))).limit(1);
   if (existing[0]) {
     await db.update(cartItemsTable).set({ quantity: existing[0].quantity + body.quantity }).where(eq(cartItemsTable.id, existing[0].id));
   } else {
-    await db.insert(cartItemsTable).values({ id: id("cart"), medicineId: body.medicineId, quantity: body.quantity });
+    await db.insert(cartItemsTable).values({ id: id("cart"), userId, medicineId: body.medicineId, quantity: body.quantity });
   }
-  res.json(await getCartPayload());
+  res.json(await getCartPayload(userId));
 });
 
 router.patch("/cart/:medicineId", async (req, res) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
   const params = UpdateCartItemParams.parse(req.params);
   const body = UpdateCartItemBody.parse(req.body);
   if (body.quantity <= 0) {
-    await db.delete(cartItemsTable).where(eq(cartItemsTable.medicineId, params.medicineId));
+    await db.delete(cartItemsTable).where(and(eq(cartItemsTable.userId, userId), eq(cartItemsTable.medicineId, params.medicineId)));
   } else {
-    await db.update(cartItemsTable).set({ quantity: body.quantity }).where(eq(cartItemsTable.medicineId, params.medicineId));
+    await db.update(cartItemsTable).set({ quantity: body.quantity }).where(and(eq(cartItemsTable.userId, userId), eq(cartItemsTable.medicineId, params.medicineId)));
   }
-  res.json(await getCartPayload());
+  res.json(await getCartPayload(userId));
 });
 
 router.delete("/cart/:medicineId", async (req, res) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
   const params = RemoveCartItemParams.parse(req.params);
-  await db.delete(cartItemsTable).where(eq(cartItemsTable.medicineId, params.medicineId));
-  res.json(await getCartPayload());
+  await db.delete(cartItemsTable).where(and(eq(cartItemsTable.userId, userId), eq(cartItemsTable.medicineId, params.medicineId)));
+  res.json(await getCartPayload(userId));
 });
 
-router.delete("/cart", async (_req, res) => {
-  await db.delete(cartItemsTable);
-  res.json(await getCartPayload());
+router.delete("/cart", async (req, res) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  await db.delete(cartItemsTable).where(eq(cartItemsTable.userId, userId));
+  res.json(await getCartPayload(userId));
 });
 
 router.post("/prescriptions", async (req, res) => {
@@ -274,21 +296,57 @@ router.post("/prescriptions", async (req, res) => {
   res.status(201).json({ id: row.id, fileName: row.fileName, imageUrl: row.imageUrl, createdAt: row.createdAt.toISOString() });
 });
 
-router.get("/orders", async (_req, res) => {
-  const rows = await db.select().from(ordersTable);
-  res.json(rows.map((order) => ({ ...order, items: order.items as CartLine[], paymentMethod: order.paymentMethod as "cod" | "upi", createdAt: order.createdAt.toISOString(), prescriptionId: order.prescriptionId ?? undefined })));
+router.get("/orders", async (req, res) => {
+  const token = readToken(req);
+  if (!token) {
+    res.status(401).json({ message: "Authentication required" });
+    return;
+  }
+  if (token.role === "owner") {
+    const rows = await db.select().from(ordersTable);
+    const userIds = [...new Set(rows.map((o) => o.userId))];
+    const users = userIds.length > 0 ? await db.select().from(usersTable).where(or(...userIds.map((uid) => eq(usersTable.id, uid)))) : [];
+    const userMap = new Map(users.map((u) => [u.id, u]));
+    res.json(rows.map((order) => {
+      const user = userMap.get(order.userId);
+      return { ...order, items: order.items as CartLine[], paymentMethod: order.paymentMethod as "cod" | "upi", createdAt: order.createdAt.toISOString(), prescriptionId: order.prescriptionId ?? undefined, customerName: user?.fullName, customerPhone: user?.phone };
+    }));
+  } else {
+    const rows = await db.select().from(ordersTable).where(eq(ordersTable.userId, token.id));
+    res.json(rows.map((order) => ({ ...order, items: order.items as CartLine[], paymentMethod: order.paymentMethod as "cod" | "upi", createdAt: order.createdAt.toISOString(), prescriptionId: order.prescriptionId ?? undefined })));
+  }
+});
+
+router.patch("/orders/:id", async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  const { id } = req.params;
+  const { status } = req.body as { status: string };
+  const validStatuses = ["Placed", "Out for Delivery", "Delivered"];
+  if (!validStatuses.includes(status)) {
+    res.status(400).json({ message: "Invalid status" });
+    return;
+  }
+  const rows = await db.update(ordersTable).set({ status }).where(eq(ordersTable.id, id)).returning();
+  if (!rows[0]) {
+    res.status(404).json({ message: "Order not found" });
+    return;
+  }
+  const row = rows[0];
+  res.json({ ...row, items: row.items as CartLine[], paymentMethod: row.paymentMethod as "cod" | "upi", createdAt: row.createdAt.toISOString(), prescriptionId: row.prescriptionId ?? undefined });
 });
 
 router.post("/orders", async (req, res) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
   const body = CreateOrderBody.parse(req.body);
-  const cart = await getCartPayload();
+  const cart = await getCartPayload(userId);
   if (cart.items.length === 0) {
     res.status(400).json({ message: "Add at least one medicine before checkout" });
     return;
   }
-  const order = { id: id("ord"), items: cart.items, total: cart.total, paymentMethod: body.paymentMethod, status: "Placed", etaMinutes: 10 + Math.floor(Math.random() * 11), prescriptionId: body.prescriptionId ?? null, deliveryAddress: body.deliveryAddress };
+  const order = { id: id("ord"), userId, items: cart.items, total: cart.total, paymentMethod: body.paymentMethod, status: "Placed", etaMinutes: 10 + Math.floor(Math.random() * 11), prescriptionId: body.prescriptionId ?? null, deliveryAddress: body.deliveryAddress };
   const rows = await db.insert(ordersTable).values(order).returning();
-  await db.delete(cartItemsTable);
+  await db.delete(cartItemsTable).where(eq(cartItemsTable.userId, userId));
   const row = rows[0];
   res.status(201).json({ ...row, items: row.items as CartLine[], paymentMethod: row.paymentMethod as "cod" | "upi", createdAt: row.createdAt.toISOString(), prescriptionId: row.prescriptionId ?? undefined });
 });

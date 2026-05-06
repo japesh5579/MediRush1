@@ -1,11 +1,20 @@
 {
   "name": "Medirush",
   "short_name": "Medirush",
+  "description": "Medicine delivered in 10 minutes",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "orientation": "portrait",
+  "background_color": "#00C853",
   "theme_color": "#00C853",
   "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "/icon.png",
       "sizes": "512x512",

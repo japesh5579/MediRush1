@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { sql } from "drizzle-orm";
-import { db, cartItemsTable, categoriesTable, medicinesTable, ordersTable, prescriptionsTable, usersTable } from "@workspace/db";
+import { db, pool, cartItemsTable, categoriesTable, medicinesTable, ordersTable, prescriptionsTable, usersTable } from "@workspace/db";
 import { AddCartItemBody, CreateCategoryBody, CreateMedicineBody, CreateOrderBody, DeleteCategoryParams, DeleteMedicineParams, ListMedicinesQueryParams, LoginBody, RemoveCartItemParams, SignupBody, UpdateCartItemBody, UpdateCartItemParams, UpdateMedicineBody, UpdateMedicineParams, UploadPrescriptionBody } from "@workspace/api-zod";
 import crypto from "node:crypto";
 
@@ -98,6 +98,38 @@ function svgDataUrl(label: string, color: string) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
+async function ensureTables() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS medirush_users (
+      id TEXT PRIMARY KEY, full_name TEXT NOT NULL, phone TEXT NOT NULL UNIQUE,
+      email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, location TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'user', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS medirush_categories (
+      id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS medirush_medicines (
+      id TEXT PRIMARY KEY, name TEXT NOT NULL, price DOUBLE PRECISION NOT NULL,
+      category_id TEXT NOT NULL, image_url TEXT NOT NULL, description TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS medirush_cart_items (
+      id TEXT PRIMARY KEY, user_id TEXT NOT NULL, medicine_id TEXT NOT NULL,
+      quantity INTEGER NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS medirush_prescriptions (
+      id TEXT PRIMARY KEY, file_name TEXT NOT NULL, image_url TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS medirush_orders (
+      id TEXT PRIMARY KEY, user_id TEXT NOT NULL, items JSONB NOT NULL,
+      total DOUBLE PRECISION NOT NULL, payment_method TEXT NOT NULL, status TEXT NOT NULL,
+      eta_minutes INTEGER NOT NULL, prescription_id TEXT, delivery_address TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+}
+
 async function ensureSeedData() {
   const categories = await db.select().from(categoriesTable).limit(1);
   if (categories.length > 0) return;
@@ -129,8 +161,8 @@ async function ensureSeedData() {
   ]);
 }
 
-const ready = ensureSeedData().catch((err) => {
-  console.warn("Database seed skipped (DB may be unavailable):", err?.message ?? err, err?.cause ?? "");
+const ready = ensureTables().then(() => ensureSeedData()).catch((err) => {
+  console.warn("DB init skipped:", err?.message ?? err);
 });
 
 async function getCartPayload(userId: string) {
@@ -354,6 +386,22 @@ router.post("/orders", async (req, res) => {
 router.get("/dashboard/summary", async (_req, res) => {
   const [medicines, categories, orders] = await Promise.all([db.select().from(medicinesTable), db.select().from(categoriesTable), db.select().from(ordersTable)]);
   res.json({ medicines: medicines.length, categories: categories.length, orders: orders.length, revenue: orders.reduce((sum, order) => sum + order.total, 0) });
+});
+
+router.get("/debug/status", async (_req, res) => {
+  try {
+    const { rows } = await pool.query<{ table_name: string }>(
+      `SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'medirush_%' ORDER BY table_name`
+    );
+    const tables = rows.map(r => r.table_name);
+    let cartTest = "ok";
+    try {
+      await pool.query(`SELECT 1 FROM medirush_cart_items WHERE user_id = $1 LIMIT 1`, ["test"]);
+    } catch (e: any) { cartTest = e.message; }
+    res.json({ tables, cartTest, env: { hasDb: !!process.env.DATABASE_URL } });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 router.get("/config/payment", (_req, res) => {

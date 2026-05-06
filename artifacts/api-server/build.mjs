@@ -30,7 +30,6 @@ async function buildAll() {
     external: [
       "drizzle-orm",
       "drizzle-orm/*",
-      "pg",
       "*.node",
       "sharp",
       "better-sqlite3",

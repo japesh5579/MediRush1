@@ -50,7 +50,7 @@ export default function OwnerDashboard() {
 
   const { data: storeConfig } = useQuery<{ hideOutOfStock: boolean }>({
     queryKey: ["store-config"],
-    queryFn: () => fetch("/api/medirush/config/store").then(r => r.json()),
+    queryFn: () => fetch("/api/config/store").then(r => r.json()),
   });
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export default function OwnerDashboard() {
   }, [storeConfig]);
 
   const updateStoreConfig = useMutation({
-    mutationFn: (value: boolean) => authFetch("/api/medirush/config/store", { method: "PATCH", body: JSON.stringify({ hideOutOfStock: value }) }),
+    mutationFn: (value: boolean) => authFetch("/api/config/store", { method: "PATCH", body: JSON.stringify({ hideOutOfStock: value }) }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["store-config"] }),
   });
 
@@ -114,7 +114,7 @@ export default function OwnerDashboard() {
   const saveAllStock = async () => {
     const entries = Object.entries(stockEdits).filter(([, v]) => v !== "");
     for (const [medId, val] of entries) {
-      await authFetch(`/api/medirush/medicines/${medId}`, {
+      await authFetch(`/api/medicines/${medId}`, {
         method: "PUT",
         body: JSON.stringify({
           ...(medicines?.find(m => m.id === medId) ?? {}),

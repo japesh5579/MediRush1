@@ -157,7 +157,7 @@ export default function UserDashboard() {
 
   const { data: savedAddresses = [], refetch: refetchAddresses } = useQuery<SavedAddress[]>({
     queryKey: ["saved-addresses"],
-    queryFn: () => authFetch("/api/medirush/saved-addresses"),
+    queryFn: () => authFetch("/api/saved-addresses"),
   });
 
   useEffect(() => { setVisibleSearchCount(20); }, [searchQuery]);
@@ -174,7 +174,7 @@ export default function UserDashboard() {
 
   const changePassword = useMutation({
     mutationFn: (data: { currentPassword: string; newPassword: string }) =>
-      authFetch("/api/medirush/auth/password", { method: "PATCH", body: JSON.stringify(data) }),
+      authFetch("/api/auth/password", { method: "PATCH", body: JSON.stringify(data) }),
     onSuccess: () => {
       toast({ title: "Password updated successfully" });
       setShowChangePwd(false);
@@ -185,7 +185,7 @@ export default function UserDashboard() {
 
   const updateProfile = useMutation({
     mutationFn: (data: { fullName: string; phone: string; location: string }) =>
-      authFetch("/api/medirush/auth/profile", { method: "PATCH", body: JSON.stringify(data) }),
+      authFetch("/api/auth/profile", { method: "PATCH", body: JSON.stringify(data) }),
     onSuccess: (updated) => {
       login({ ...user!, ...updated }, token!);
       setEditingProfile(false);
@@ -195,7 +195,7 @@ export default function UserDashboard() {
   });
 
   const cancelOrder = useMutation({
-    mutationFn: (orderId: string) => authFetch(`/api/medirush/orders/${orderId}/cancel`, { method: "POST" }),
+    mutationFn: (orderId: string) => authFetch(`/api/orders/${orderId}/cancel`, { method: "POST" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
       toast({ title: "Order cancelled" });
@@ -205,18 +205,18 @@ export default function UserDashboard() {
 
   const rateOrder = useMutation({
     mutationFn: ({ orderId, rating }: { orderId: string; rating: number }) =>
-      authFetch(`/api/medirush/orders/${orderId}/rate`, { method: "POST", body: JSON.stringify({ rating }) }),
+      authFetch(`/api/orders/${orderId}/rate`, { method: "POST", body: JSON.stringify({ rating }) }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() }),
   });
 
   const saveAddress = useMutation({
     mutationFn: ({ label, address }: { label: string; address: string }) =>
-      authFetch("/api/medirush/saved-addresses", { method: "POST", body: JSON.stringify({ label, address }) }),
+      authFetch("/api/saved-addresses", { method: "POST", body: JSON.stringify({ label, address }) }),
     onSuccess: () => { refetchAddresses(); setSavingAddr(false); setAddrLabel(""); toast({ title: "Address saved" }); },
   });
 
   const deleteAddress = useMutation({
-    mutationFn: (addrId: string) => authFetch(`/api/medirush/saved-addresses/${addrId}`, { method: "DELETE" }),
+    mutationFn: (addrId: string) => authFetch(`/api/saved-addresses/${addrId}`, { method: "DELETE" }),
     onSuccess: () => refetchAddresses(),
   });
 
@@ -950,12 +950,21 @@ export default function UserDashboard() {
                   </div>
 
                   {paymentMethod === "upi" && (
-                    <div className="bg-green-50 rounded-2xl p-3 flex items-center gap-3">
-                      <img src={paymentConfig?.qrCodeImageUrl} alt="QR" className="w-16 h-16 rounded-xl object-cover" />
-                      <div>
-                        <p className="text-xs text-slate-500">Pay to UPI ID</p>
-                        <p className="font-bold text-sm">{paymentConfig?.upiId ?? "medirush@upi"}</p>
+                    <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-slate-500">UPI ID</p>
+                          <p className="font-bold text-sm text-slate-800">9815950758@ptsbi</p>
+                        </div>
+                        <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-1 rounded-full">Medirush</span>
                       </div>
+                      <a
+                        href={`upi://pay?pa=9815950758@ptsbi&pn=Medirush&am=${cartTotal.toFixed(2)}&tn=Medirush+Order&cu=INR`}
+                        className="block w-full bg-blue-600 text-white text-center font-bold py-3 rounded-xl text-sm"
+                      >
+                        Open UPI App · Pay {money(cartTotal)}
+                      </a>
+                      <p className="text-[11px] text-slate-400 text-center">Opens GPay, PhonePe, Paytm, or any UPI app</p>
                     </div>
                   )}
                 </div>
@@ -985,7 +994,7 @@ export default function UserDashboard() {
                   </div>
                 </div>
                 <button onClick={checkout} disabled={createOrder.isPending || !deliveryAddress.trim()} className="w-full bg-green-600 disabled:opacity-50 text-white font-bold py-4 rounded-2xl text-base">
-                  {createOrder.isPending ? "Placing order..." : `Place Order · ETA 10-20 min`}
+                  {createOrder.isPending ? "Placing order..." : paymentMethod === "upi" ? "I've Paid · Place Order" : "Place Order · ETA 10-20 min"}
                 </button>
               </div>
             )}

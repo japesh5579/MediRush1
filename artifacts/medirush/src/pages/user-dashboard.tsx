@@ -953,18 +953,21 @@ export default function UserDashboard() {
                     <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs text-slate-500">UPI ID</p>
-                          <p className="font-bold text-sm text-slate-800">9815950758@ptsbi</p>
+                          <p className="text-xs text-slate-500">Pay to UPI ID</p>
+                          <p className="font-bold text-sm text-slate-800 select-all">9815950758@ptsbi</p>
                         </div>
-                        <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-1 rounded-full">Medirush</span>
+                        <button
+                          type="button"
+                          onClick={() => { navigator.clipboard.writeText("9815950758@ptsbi"); toast({ title: "UPI ID copied" }); }}
+                          className="text-xs bg-white border border-blue-200 text-blue-600 font-semibold px-3 py-1.5 rounded-lg"
+                        >Copy</button>
                       </div>
-                      <a
-                        href={`upi://pay?pa=9815950758@ptsbi&pn=Medirush&am=${cartTotal.toFixed(2)}&tn=Medirush+Order&cu=INR`}
-                        className="block w-full bg-blue-600 text-white text-center font-bold py-3 rounded-xl text-sm"
-                      >
-                        Open UPI App · Pay {money(cartTotal)}
-                      </a>
-                      <p className="text-[11px] text-slate-400 text-center">Opens GPay, PhonePe, Paytm, or any UPI app</p>
+                      <p className="text-center text-xs text-slate-500">Amount: <span className="font-bold text-slate-800">{money(cartTotal)}</span> · Open your app and pay</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <a href={`tez://upi/pay?pa=9815950758@ptsbi&pn=Medirush&am=${cartTotal.toFixed(2)}&tn=Medirush+Order&cu=INR`} className="bg-white border border-slate-200 rounded-xl py-2.5 text-center text-xs font-bold text-slate-700">GPay</a>
+                        <a href={`phonepe://pay?transactionId=${Date.now()}&amount=${Math.round(cartTotal * 100)}&pa=9815950758@ptsbi&pn=Medirush&tn=MedirushOrder&mc=&mode=04&purpose=00`} className="bg-white border border-slate-200 rounded-xl py-2.5 text-center text-xs font-bold text-slate-700">PhonePe</a>
+                        <a href={`paytmmp://pay?pa=9815950758@ptsbi&pn=Medirush&am=${cartTotal.toFixed(2)}&tn=Medirush+Order&cu=INR`} className="bg-white border border-slate-200 rounded-xl py-2.5 text-center text-xs font-bold text-slate-700">Paytm</a>
+                      </div>
                     </div>
                   )}
                 </div>

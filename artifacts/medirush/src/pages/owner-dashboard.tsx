@@ -85,7 +85,7 @@ export default function OwnerDashboard() {
     if (!orders) return;
     const count = orders.length;
     if (prevOrderCount.current !== null && count > prevOrderCount.current) {
-      const newest = orders[orders.length - 1];
+      const newest = orders[0];
       playAlertSound();
       toast({ title: "New order received!", description: `${newest.customerName ?? "Customer"} · ₹${newest.total.toFixed(0)}` });
       if (typeof Notification !== "undefined" && Notification.permission === "granted") {

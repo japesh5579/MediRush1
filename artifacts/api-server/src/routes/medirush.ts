@@ -191,16 +191,24 @@ async function ensureSeedData() {
 
 async function ensureOtcProducts() {
   const cats: Record<string, string> = {
-    "Hydration":       "cat_hydration",
-    "Calcium Supplement": "cat_calcium",
-    "Vitamins":        "cat_vitamins",
-    "Digestive Care":  "cat_digestive",
-    "Pain Relief":     "cat_pain_relief",
-    "Fever & Pain":    "cat_cold_care",
-    "Multivitamins":   "cat_multivitamins",
-    "Acidity Relief":  "cat_acidity",
-    "First Aid":       "cat_first_aid",
-    "Personal Hygiene":"cat_personal_hygiene",
+    "Hydration":         "cat_hydration",
+    "Calcium Supplement":"cat_calcium",
+    "Vitamins":          "cat_vitamins",
+    "Digestive Care":    "cat_digestive",
+    "Pain Relief":       "cat_pain_relief",
+    "Fever & Pain":      "cat_cold_care",
+    "Multivitamins":     "cat_multivitamins",
+    "Acidity Relief":    "cat_acidity",
+    "First Aid":         "cat_first_aid",
+    "Personal Hygiene":  "cat_personal_hygiene",
+    "Cold & Cough":      "cat_cold_cough",
+    "Skin Care":         "cat_skin_care",
+    "Ayurvedic":         "cat_ayurvedic",
+    "Diabetes Care":     "cat_diabetes",
+    "Allergy":           "cat_allergy",
+    "Antibiotics":       "cat_antibiotics",
+    "Eye & Ear Care":    "cat_eye_ear",
+    "Baby Care":         "cat_baby_care",
   };
   for (const [name, catId] of Object.entries(cats)) {
     await pool.query(`INSERT INTO medirush_categories (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`, [catId, name]);
@@ -216,7 +224,43 @@ async function ensureOtcProducts() {
     { id: "med_revital_h",       name: "Revital H",                 company: "Sun Pharmaceutical Industries",  catId: "cat_multivitamins",    mrp: 120, price: 108.00, desc: "Daily multivitamin with ginseng for energy, stamina, and overall vitality." },
     { id: "med_eno_regular",     name: "ENO",                       company: "Haleon India",                   catId: "cat_acidity",          mrp: 10,  price: 9.00,  desc: "Fast-acting antacid powder for instant relief from acidity and heartburn." },
     { id: "med_dettol_liquid",   name: "Dettol Antiseptic Liquid",  company: "Reckitt",                        catId: "cat_first_aid",        mrp: 75,  price: 67.50, desc: "Multipurpose antiseptic liquid for cuts, wounds, and surface disinfection." },
-    { id: "med_whisper_ultra",   name: "Whisper Ultra",             company: "Procter & Gamble",               catId: "cat_personal_hygiene", mrp: 50,  price: 45.00, desc: "Ultra-thin sanitary pads with soft cover for maximum comfort and protection." },
+    { id: "med_whisper_ultra",   name: "Whisper Ultra",             company: "Procter & Gamble",               catId: "cat_personal_hygiene", mrp: 50,   price: 45.00,  desc: "Ultra-thin sanitary pads with soft cover for maximum comfort and protection." },
+
+    // Cold & Cough
+    { id: "med_vicks_vaporub",   name: "Vicks VapoRub",             company: "Procter & Gamble",               catId: "cat_cold_cough",       mrp: 95,   price: 85.50,  desc: "Mentholated topical ointment for relief from cold, cough, and blocked nose." },
+    { id: "med_benadryl_syrup",  name: "Benadryl Cough Syrup",      company: "Johnson & Johnson",              catId: "cat_cold_cough",       mrp: 115,  price: 103.50, desc: "Effective cough suppressant syrup for dry and irritating cough." },
+    { id: "med_sinarest",        name: "Sinarest Tablet",           company: "Centaur Pharmaceuticals",        catId: "cat_cold_cough",       mrp: 28,   price: 25.20,  desc: "Decongestant tablet for relief from cold, sinusitis, and nasal congestion." },
+
+    // Skin Care
+    { id: "med_lacto_calamine",  name: "Lacto Calamine Lotion",     company: "Piramal Healthcare",             catId: "cat_skin_care",        mrp: 110,  price: 99.00,  desc: "Skin balancing lotion that controls oiliness, reduces pores and soothes skin." },
+    { id: "med_betadine",        name: "Betadine Solution",         company: "Win-Medicare",                   catId: "cat_skin_care",        mrp: 85,   price: 76.50,  desc: "Povidone iodine antiseptic solution for wound cleaning and infection prevention." },
+    { id: "med_burnol",          name: "Burnol Cream",              company: "Dr. Morepen",                    catId: "cat_skin_care",        mrp: 55,   price: 49.50,  desc: "Antiseptic cream for first aid treatment of minor burns and scalds." },
+    { id: "med_boroplus",        name: "Boroplus Antiseptic Cream", company: "Emami Limited",                  catId: "cat_skin_care",        mrp: 42,   price: 37.80,  desc: "Antiseptic cream with neem and tulsi for skin protection and winter care." },
+
+    // Ayurvedic
+    { id: "med_liv52",           name: "Liv 52 DS",                 company: "Himalaya Drug Company",          catId: "cat_ayurvedic",        mrp: 120,  price: 108.00, desc: "Herbal liver supplement that supports liver function and protects against damage." },
+    { id: "med_pudin_hara",      name: "Pudin Hara Liquid",         company: "Dabur India",                    catId: "cat_ayurvedic",        mrp: 30,   price: 27.00,  desc: "Natural peppermint formulation for instant relief from gas and stomach pain." },
+    { id: "med_zandu_balm",      name: "Zandu Balm",                company: "Emami Limited",                  catId: "cat_ayurvedic",        mrp: 48,   price: 43.20,  desc: "Ayurvedic pain relief balm with saffron for headache, cold, and body pain." },
+
+    // Diabetes Care
+    { id: "med_glucon_d",        name: "Glucon-D Orange",           company: "Heinz India",                    catId: "cat_diabetes",         mrp: 78,   price: 70.20,  desc: "Glucose powder with vitamins for instant energy replenishment." },
+    { id: "med_onetouch_strips",  name: "OneTouch Select Strips",   company: "Johnson & Johnson",              catId: "cat_diabetes",         mrp: 650,  price: 585.00, desc: "Blood glucose test strips compatible with OneTouch Select glucometer (25 strips)." },
+
+    // Allergy
+    { id: "med_cetirizine",      name: "Cetrizine 10mg",            company: "GSK India",                      catId: "cat_allergy",          mrp: 18,   price: 16.20,  desc: "Antihistamine tablet for relief from allergic rhinitis, urticaria, and skin rashes." },
+    { id: "med_avil_25",         name: "Avil 25mg Tablet",          company: "Sanofi India",                   catId: "cat_allergy",          mrp: 22,   price: 19.80,  desc: "Pheniramine maleate antihistamine for allergic reactions, itching, and hay fever." },
+
+    // Vitamins / supplements
+    { id: "med_neurobion_forte",  name: "Neurobion Forte",          company: "Merck India",                    catId: "cat_vitamins",         mrp: 35,   price: 31.50,  desc: "B-complex vitamin supplement for nerve health and energy metabolism." },
+    { id: "med_evion_400",        name: "Evion 400 Capsule",        company: "Merck India",                    catId: "cat_vitamins",         mrp: 68,   price: 61.20,  desc: "Vitamin E 400 IU capsule for skin health, immunity, and antioxidant support." },
+    { id: "med_becosules",        name: "Becosules Capsule",        company: "Pfizer India",                   catId: "cat_multivitamins",    mrp: 65,   price: 58.50,  desc: "B-complex with Vitamin C for energy, metabolism, and healthy skin and hair." },
+
+    // Eye & Ear
+    { id: "med_otrivin",          name: "Otrivin Nasal Spray",      company: "Novartis India",                 catId: "cat_eye_ear",          mrp: 105,  price: 94.50,  desc: "Xylometazoline nasal spray for fast relief from nasal congestion and stuffy nose." },
+
+    // Baby Care
+    { id: "med_gripe_water",      name: "Woodward's Gripe Water",   company: "Reckitt",                        catId: "cat_baby_care",        mrp: 58,   price: 52.20,  desc: "Classic gripe water remedy for infant colic, gas, and stomach discomfort." },
+    { id: "med_johnsons_powder",  name: "Johnson's Baby Powder",    company: "Kenvue",                         catId: "cat_baby_care",        mrp: 95,   price: 85.50,  desc: "Gentle talc-free baby powder to keep skin soft, dry, and rash-free." },
   ];
 
   for (const m of otc) {

@@ -315,6 +315,68 @@ async function ensureOtcProducts() {
     { id: "med_renotin_caps",    name: "Renotin Capsules",          company: "Sun Pharma", catId: "cat_vitamins",      mrp: 918.00, price: 826.20,  desc: "Nephroprotective supplement with alpha-ketoacids for chronic kidney disease management." },
     { id: "med_dapefy_5",        name: "Dapefy 5 Tablet",           company: "Sun Pharma", catId: "cat_diabetes",      mrp: 163.00, price: 146.70,  desc: "Dapagliflozin SGLT2 inhibitor to lower blood sugar and reduce cardiovascular risk in type 2 diabetes." },
 
+    // ── Micro Labs Medicines ──────────────────────────────
+    // Fever & Pain (Dolo range)
+    { id: "med_dolo_650",        name: "Dolo 650 Tablet",           company: "Micro Labs", catId: "cat_cold_care",     mrp: 33.76,  price: 30.38,  desc: "Paracetamol 650mg for fast relief from fever and mild to moderate pain." },
+    { id: "med_dolo_500",        name: "Dolo 500 Tablet",           company: "Micro Labs", catId: "cat_cold_care",     mrp: 14.95,  price: 13.46,  desc: "Paracetamol 500mg tablet for fever, headache, and body pain." },
+    { id: "med_dolo_extraa",     name: "Dolo Extraa Tablet",        company: "Micro Labs", catId: "cat_cold_care",     mrp: 47.20,  price: 42.48,  desc: "Paracetamol extended formulation for prolonged fever and pain relief." },
+    { id: "med_dolo_cold",       name: "Dolo Cold Tablet",          company: "Micro Labs", catId: "cat_cold_cough",    mrp: 40.00,  price: 36.00,  desc: "Paracetamol + Phenylephrine combination for cold, nasal congestion, and fever." },
+    { id: "med_dolo_spray_35",   name: "Dolo Spray 35gm",           company: "Micro Labs", catId: "cat_pain_relief",   mrp: 91.00,  price: 81.90,  desc: "Diclofenac topical spray for localized muscle and joint pain relief." },
+    { id: "med_dolo_spray_55",   name: "Dolo Spray 55gm",           company: "Micro Labs", catId: "cat_pain_relief",   mrp: 150.00, price: 135.00, desc: "Diclofenac topical spray 55gm for extended relief from muscle and joint pain." },
+    // Cold & Cough
+    { id: "med_dolokoff_60",     name: "Dolokoff DX Syrup 60ml",    company: "Micro Labs", catId: "cat_cold_cough",    mrp: 49.50,  price: 44.55,  desc: "Dextromethorphan + Phenylephrine syrup for dry cough and nasal congestion." },
+    { id: "med_dolokoff_100",    name: "Dolokoff DX Syrup 100ml",   company: "Micro Labs", catId: "cat_cold_cough",    mrp: 82.55,  price: 74.30,  desc: "Dextromethorphan + Phenylephrine syrup 100ml for cough and cold relief." },
+    // Digestive
+    { id: "med_cyclop",          name: "Cyclop Tablet",             company: "Micro Labs", catId: "cat_digestive",     mrp: 40.95,  price: 36.86,  desc: "Cyclopentolate antispasmodic for abdominal cramps, IBS, and stomach pain." },
+    // Antibiotics
+    { id: "med_microdox_lbx",    name: "Microdox LBX Capsule",      company: "Micro Labs", catId: "cat_antibiotics",   mrp: 97.00,  price: 87.30,  desc: "Doxycycline + Lactobacillus capsule for bacterial infections with gut protection." },
+    { id: "med_micropod_200",    name: "Micropod 200 DT",           company: "Micro Labs", catId: "cat_antibiotics",   mrp: 89.00,  price: 80.10,  desc: "Cefpodoxime 200mg dispersible tablet for respiratory, urinary, and skin infections." },
+    // Pain Relief
+    { id: "med_rapid_hot_gel",   name: "Rapid Hot Gel",             company: "Micro Labs", catId: "cat_pain_relief",   mrp: 109.20, price: 98.28,  desc: "Diclofenac + Methyl salicylate warming gel for muscle pain, sprains, and stiffness." },
+    // Vitamins & Supplements
+    { id: "med_biovital",        name: "BioVital Capsule",          company: "Micro Labs", catId: "cat_multivitamins", mrp: 237.00, price: 213.30, desc: "Comprehensive multivitamin and mineral capsule for energy, immunity, and overall vitality." },
+    { id: "med_meconerv_forte",  name: "Meconerv Forte",            company: "Micro Labs", catId: "cat_vitamins",      mrp: 90.00,  price: 81.00,  desc: "Methylcobalamin + B-vitamins for nerve repair, neuropathy, and vitamin B12 deficiency." },
+    { id: "med_oxidon",          name: "Oxidon Capsule",            company: "Micro Labs", catId: "cat_vitamins",      mrp: 32.00,  price: 28.80,  desc: "Antioxidant supplement with vitamins C, E, and zinc for cellular protection." },
+    { id: "med_oxidon_plus",     name: "Oxidon Plus Capsule",       company: "Micro Labs", catId: "cat_vitamins",      mrp: 138.75, price: 124.88, desc: "Advanced antioxidant formula with lycopene, selenium, and mixed carotenoids." },
+    { id: "med_melcovit",        name: "Melcovit Capsule",          company: "Micro Labs", catId: "cat_vitamins",      mrp: 100.00, price: 90.00,  desc: "Methylcobalamin + Folic acid + B6 for nerve health and homocysteine management." },
+    { id: "med_melcovit_gold",   name: "Melcovit Gold",             company: "Micro Labs", catId: "cat_vitamins",      mrp: 125.00, price: 112.50, desc: "Premium methylcobalamin + alpha lipoic acid combination for diabetic neuropathy." },
+    { id: "med_bc300",           name: "BC-300 Capsule",            company: "Micro Labs", catId: "cat_vitamins",      mrp: 35.80,  price: 32.22,  desc: "Vitamin B-complex capsule for energy metabolism and nervous system support." },
+    { id: "med_irex_12",         name: "Irex-12 Capsule",           company: "Micro Labs", catId: "cat_vitamins",      mrp: 10.00,  price: 9.00,   desc: "Iron + Vitamin B12 + Folic acid capsule for anemia and iron deficiency." },
+    { id: "med_melvit",          name: "Melvit Capsule",            company: "Micro Labs", catId: "cat_vitamins",      mrp: 78.00,  price: 70.20,  desc: "Melatonin + vitamins supplement to support healthy sleep cycles." },
+    // Eye & Ear
+    { id: "med_lutivit",         name: "Lutivit Capsule",           company: "Micro Labs", catId: "cat_eye_ear",       mrp: 80.00,  price: 72.00,  desc: "Lutein + Zeaxanthin + vitamins for macular health and age-related eye protection." },
+    // Acidity & Reflux
+    { id: "med_pantoflux",       name: "Pantoflux Capsule",         company: "Micro Labs", catId: "cat_acidity",       mrp: 45.00,  price: 40.50,  desc: "Pantoprazole + Domperidone capsule for acid reflux, gastritis, and bloating." },
+    { id: "med_omiflux",         name: "Omiflux Capsule",           company: "Micro Labs", catId: "cat_acidity",       mrp: 45.00,  price: 40.50,  desc: "Omeprazole + Domperidone capsule for GERD, acidity, and nausea." },
+    { id: "med_esofag_20",       name: "Esofag 20 Tablet",          company: "Micro Labs", catId: "cat_acidity",       mrp: 19.00,  price: 17.10,  desc: "Esomeprazole 20mg for gastric acid suppression and GERD management." },
+    { id: "med_esofag_40",       name: "Esofag 40 Tablet",          company: "Micro Labs", catId: "cat_acidity",       mrp: 38.00,  price: 34.20,  desc: "Esomeprazole 40mg for severe acid reflux, erosive esophagitis, and peptic ulcers." },
+    { id: "med_esofag_d",        name: "Esofag-D Capsule",          company: "Micro Labs", catId: "cat_acidity",       mrp: 75.00,  price: 67.50,  desc: "Esomeprazole + Domperidone for acid reflux with nausea and gastroparesis." },
+    { id: "med_rabiros_20",      name: "Rabiros 20 Tablet",         company: "Micro Labs", catId: "cat_acidity",       mrp: 30.96,  price: 27.86,  desc: "Rabeprazole 20mg proton pump inhibitor for peptic ulcer and GERD." },
+    { id: "med_esotag_30",       name: "Esotag 30 Tablet",          company: "Micro Labs", catId: "cat_acidity",       mrp: 65.00,  price: 58.50,  desc: "Esomeprazole 30mg modified-release for sustained acid control." },
+    { id: "med_helirab_d",       name: "Helirab-D Capsule",         company: "Micro Labs", catId: "cat_acidity",       mrp: 45.00,  price: 40.50,  desc: "Rabeprazole + Domperidone capsule for acid reflux with gastric motility issues." },
+    // Diabetes
+    { id: "med_diapride_2",      name: "Diapride 2 Tablet",         company: "Micro Labs", catId: "cat_diabetes",      mrp: 54.00,  price: 48.60,  desc: "Glimepiride 2mg sulfonylurea to stimulate insulin in type 2 diabetes." },
+    { id: "med_diapride_4",      name: "Diapride 4 Tablet",         company: "Micro Labs", catId: "cat_diabetes",      mrp: 83.00,  price: 74.70,  desc: "Glimepiride 4mg for better blood sugar control in type 2 diabetes." },
+    { id: "med_diabose_50",      name: "Diabose 50 Tablet",         company: "Micro Labs", catId: "cat_diabetes",      mrp: 85.00,  price: 76.50,  desc: "Acarbose 50mg to reduce post-meal blood sugar spikes in type 2 diabetes." },
+    { id: "med_dianorm_od",      name: "Dianorm OD 30",             company: "Micro Labs", catId: "cat_diabetes",      mrp: 25.00,  price: 22.50,  desc: "Gliclazide modified-release 30mg for sustained blood glucose control." },
+    { id: "med_dibizide_5",      name: "Dibizide 5 Tablet",         company: "Micro Labs", catId: "cat_diabetes",      mrp: 4.86,   price: 4.37,   desc: "Glipizide 5mg to stimulate insulin secretion in type 2 diabetes." },
+    // Heart & BP
+    { id: "med_angiplat_2_5",    name: "Angiplat 2.5 Capsule",      company: "Micro Labs", catId: "cat_heart_bp",      mrp: 194.00, price: 174.60, desc: "Ticagrelor 2.5mg antiplatelet to prevent blood clots after heart attack or ACS." },
+    { id: "med_plagerine_a",     name: "Plagerine-A Capsule",       company: "Micro Labs", catId: "cat_heart_bp",      mrp: 30.00,  price: 27.00,  desc: "Clopidogrel + Aspirin dual antiplatelet for post-cardiac event protection." },
+    { id: "med_carvidon_od",     name: "Carvidon OD Capsule",       company: "Micro Labs", catId: "cat_heart_bp",      mrp: 135.00, price: 121.50, desc: "Trimetazidine OD for angina, improves cardiac efficiency and reduces chest pain." },
+    { id: "med_nebilong_2_5",    name: "Nebilong 2.5 Tablet",       company: "Micro Labs", catId: "cat_heart_bp",      mrp: 35.00,  price: 31.50,  desc: "Nebivolol beta-blocker for hypertension and heart failure with better tolerability." },
+    { id: "med_metadure_2_5",    name: "Metadure 2.5 Tablet",       company: "Micro Labs", catId: "cat_heart_bp",      mrp: 50.00,  price: 45.00,  desc: "Metolazone diuretic for oedema and resistant hypertension." },
+    { id: "med_metapro_xl25",    name: "Metapro XL 25",             company: "Micro Labs", catId: "cat_heart_bp",      mrp: 60.00,  price: 54.00,  desc: "Metoprolol succinate XL 25mg extended-release for hypertension and angina." },
+    { id: "med_metapro_25",      name: "Metapro 25 Tablet",         company: "Micro Labs", catId: "cat_heart_bp",      mrp: 12.50,  price: 11.25,  desc: "Metoprolol tartrate 25mg for high blood pressure and heart rate control." },
+    { id: "med_amlong_mt25",     name: "Amlong MT 25",              company: "Micro Labs", catId: "cat_heart_bp",      mrp: 65.00,  price: 58.50,  desc: "Amlodipine + Metoprolol combination for hypertension with better BP control." },
+    { id: "med_rosinorm_2",      name: "Rosinorm 2 Tablet",         company: "Micro Labs", catId: "cat_heart_bp",      mrp: 33.00,  price: 29.70,  desc: "Rosuvastatin 2mg low-dose statin for mild hypercholesterolaemia." },
+    { id: "med_rosinorm_4",      name: "Rosinorm 4 Tablet",         company: "Micro Labs", catId: "cat_heart_bp",      mrp: 58.00,  price: 52.20,  desc: "Rosuvastatin 4mg statin to lower LDL and reduce cardiovascular risk." },
+    { id: "med_angifree_20",     name: "Angifree 20 Tablet",        company: "Micro Labs", catId: "cat_heart_bp",      mrp: 120.00, price: 108.00, desc: "Isosorbide mononitrate 20mg for prevention and treatment of angina." },
+    { id: "med_angifree_30",     name: "Angifree 30 Tablet",        company: "Micro Labs", catId: "cat_heart_bp",      mrp: 145.00, price: 130.50, desc: "Isosorbide mononitrate 30mg sustained-release for angina prophylaxis." },
+    { id: "med_arbitel_80",      name: "Arbitel 80 Tablet",         company: "Micro Labs", catId: "cat_heart_bp",      mrp: 210.00, price: 189.00, desc: "Telmisartan 80mg ARB for hypertension and cardiovascular risk reduction." },
+    { id: "med_avas_20",         name: "Avas 20 Tablet",            company: "Micro Labs", catId: "cat_heart_bp",      mrp: 110.00, price: 99.00,  desc: "Atorvastatin 20mg to lower bad cholesterol and prevent cardiovascular disease." },
+    { id: "med_astin_80",        name: "Astin 80 Tablet",           company: "Micro Labs", catId: "cat_heart_bp",      mrp: 165.00, price: 148.50, desc: "Atorvastatin 80mg high-intensity statin for aggressive cholesterol management." },
+
   ];
 
   for (const m of otc) {

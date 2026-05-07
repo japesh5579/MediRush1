@@ -69,9 +69,14 @@ autoInstallPeers: false
 
 onlyBuiltDependencies:
   - '@swc/core'
+  - better-sqlite3
   - esbuild
   - msw
   - unrs-resolver
+
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true
 
 overrides:
   # replit uses linux-x64 only, we can exclude all other platforms

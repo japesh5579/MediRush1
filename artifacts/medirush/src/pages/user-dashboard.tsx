@@ -129,12 +129,12 @@ export default function UserDashboard() {
   const medicineParams = useMemo(() => ({ search: searchQuery || undefined }), [searchQuery]);
   const { data: medicines, isLoading: loadingMedicines } = useListMedicines(medicineParams);
   const { data: categories } = useListCategories();
-  const { data: cart } = useGetCart();
+  const { data: cart, refetch: refreshCart } = useGetCart();
   const { data: paymentConfig } = useGetPaymentConfig();
   const { data: orders } = useListOrders();
   const { data: storeConfig } = useQuery<{ hideOutOfStock: boolean }>({
     queryKey: ["store-config"],
-    queryFn: () => fetch("/api/medirush/config/store").then(r => r.json()),
+    queryFn: () => fetch("/api/config/store").then(r => r.json()),
   });
 
   const filteredMedicines = useMemo(() => {
@@ -297,6 +297,7 @@ export default function UserDashboard() {
         setOrderConfirmation({ id: order.id, total: order.total, eta: order.etaMinutes });
         setActiveTab("orders");
       },
+      onError: (e: any) => toast({ title: "Order failed", description: e?.message || "Please try again", variant: "destructive" }),
     },
   });
 

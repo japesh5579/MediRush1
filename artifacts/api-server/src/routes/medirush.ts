@@ -211,6 +211,9 @@ async function ensureOtcProducts() {
     "Baby Care":         "cat_baby_care",
     "Respiratory":       "cat_respiratory",
     "Heart & BP":        "cat_heart_bp",
+    "Women's Health":    "cat_womens_health",
+    "Vertigo & Nausea":  "cat_vertigo",
+    "Neurology & Sleep": "cat_neuro_sleep",
   };
   for (const [name, catId] of Object.entries(cats)) {
     await pool.query(`INSERT INTO medirush_categories (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`, [catId, name]);
@@ -294,6 +297,24 @@ async function ensureOtcProducts() {
     // Diabetes
     { id: "med_glycomet_500",    name: "Glycomet 500mg",            company: "Cipla",  catId: "cat_diabetes",     mrp: 28,   price: 25.20,  desc: "Metformin tablet for type 2 diabetes blood sugar management." },
     { id: "med_glucobay_25",     name: "Glucobay 25mg",             company: "Cipla",  catId: "cat_diabetes",     mrp: 55,   price: 49.50,  desc: "Acarbose tablet to control post-meal blood sugar spikes in diabetes." },
+
+    // ── Sun Pharma Medicines ──────────────────────────────
+    { id: "med_sompraz_40_inj",  name: "Sompraz 40 Injection",      company: "Sun Pharma", catId: "cat_acidity",       mrp: 106.88, price: 96.19,   desc: "Pantoprazole injection for acid-related disorders, GERD, and gastric ulcers." },
+    { id: "med_pregabalin_75",   name: "Sun Pregabalin 75 Tablet",  company: "Sun Pharma", catId: "cat_pain_relief",   mrp: 109.00, price: 98.10,   desc: "Pregabalin for neuropathic pain, diabetic nerve pain, and fibromyalgia." },
+    { id: "med_famocid_20",      name: "Famocid 20 Tablet",         company: "Sun Pharma", catId: "cat_acidity",       mrp: 6.05,   price: 5.45,    desc: "Famotidine H2-blocker for acidity, heartburn, and peptic ulcers." },
+    { id: "med_susten_vag_gel",  name: "Susten Vaginal Gel",        company: "Sun Pharma", catId: "cat_womens_health", mrp: 171.56, price: 154.40,  desc: "Progesterone vaginal gel for luteal phase support and pregnancy maintenance." },
+    { id: "med_volibo_r",        name: "Volibo R 0.3/1 Tablet",     company: "Sun Pharma", catId: "cat_diabetes",      mrp: 177.19, price: 159.47,  desc: "Voglibose + Metformin combination to control post-meal blood sugar in type 2 diabetes." },
+    { id: "med_parkitidin",      name: "Parkitidin Tablet",         company: "Sun Pharma", catId: "cat_neuro_sleep",   mrp: 164.06, price: 147.65,  desc: "Trihexyphenidyl for Parkinson's disease and drug-induced movement disorders." },
+    { id: "med_brinzotim",       name: "Brinzotim Eye Drops",       company: "Sun Pharma", catId: "cat_eye_ear",       mrp: 383.44, price: 345.10,  desc: "Brinzolamide + Timolol eye drops to reduce intraocular pressure in glaucoma." },
+    { id: "med_silverex_gel",    name: "Silverex Ionic Gel",        company: "Sun Pharma", catId: "cat_skin_care",     mrp: 0,      price: 0,       desc: "Silver nitrate ionic gel for wound healing, burns, and skin infections." },
+    { id: "med_sonata_lr",       name: "Sonata LR Capsule",         company: "Sun Pharma", catId: "cat_neuro_sleep",   mrp: 396.50, price: 356.85,  desc: "Zaleplon modified-release capsule for short-term treatment of insomnia." },
+    { id: "med_exel_m_cream",    name: "Exel M Cream",              company: "Sun Pharma", catId: "cat_skin_care",     mrp: 139.00, price: 125.10,  desc: "Mometasone topical corticosteroid cream for eczema, psoriasis, and dermatitis." },
+    { id: "med_prolomet_r25",    name: "Prolomet R 25 Tablet",      company: "Sun Pharma", catId: "cat_heart_bp",      mrp: 224.00, price: 201.60,  desc: "Metoprolol succinate extended-release for hypertension, angina, and heart failure." },
+    { id: "med_anaboom_shampoo", name: "Anaboom Shampoo",           company: "Sun Pharma", catId: "cat_personal_hygiene", mrp: 455.00, price: 409.50, desc: "Ketoconazole + Zinc shampoo for dandruff, seborrheic dermatitis, and hair fall." },
+    { id: "med_anaboom_serum",   name: "Anaboom Hair Serum",        company: "Sun Pharma", catId: "cat_personal_hygiene", mrp: 1390.00, price: 1251.00, desc: "Redensyl + Anagain hair growth serum to reduce hair fall and stimulate regrowth." },
+    { id: "med_renotin_caps",    name: "Renotin Capsules",          company: "Sun Pharma", catId: "cat_vitamins",      mrp: 918.00, price: 826.20,  desc: "Nephroprotective supplement with alpha-ketoacids for chronic kidney disease management." },
+    { id: "med_dapefy_5",        name: "Dapefy 5 Tablet",           company: "Sun Pharma", catId: "cat_diabetes",      mrp: 163.00, price: 146.70,  desc: "Dapagliflozin SGLT2 inhibitor to lower blood sugar and reduce cardiovascular risk in type 2 diabetes." },
+
   ];
 
   for (const m of otc) {

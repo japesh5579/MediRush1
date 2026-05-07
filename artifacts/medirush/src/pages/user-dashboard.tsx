@@ -304,7 +304,7 @@ export default function UserDashboard() {
   return (
     <div className="min-h-[100dvh] bg-gray-50 text-slate-900 max-w-md mx-auto relative" style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}>
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-green-600 px-4 pt-4 pb-3 shadow-lg">
+      <header className="sticky top-0 z-30 bg-green-600 px-4 pb-3 shadow-lg" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Activity size={22} className="text-white" />

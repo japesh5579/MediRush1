@@ -124,7 +124,7 @@ export default function OwnerDashboard() {
 
   return (
     <div className="min-h-[100dvh] bg-slate-950 text-white">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/90 px-5 py-4 backdrop-blur-xl">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/90 px-5 pb-4 backdrop-blur-xl" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500 text-slate-950"><Activity size={23} /></div>

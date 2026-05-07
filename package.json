@@ -2,6 +2,9 @@
   "name": "workspace",
   "version": "0.0.0",
   "license": "MIT",
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "esbuild", "@esbuild/linux-x64", "@esbuild/linux-arm64"]
+  },
   "scripts": {
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock'",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",

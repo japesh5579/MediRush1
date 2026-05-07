@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Activity, Bell, BellOff, Bookmark, Check, ChevronDown, ChevronRight, ChevronUp, Clock, Edit2, FileImage, Home, LogOut, MapPin, Minus, Package, Plus, Printer, RefreshCw, Search, ShoppingCart, Star, Trash2, X, XCircle } from "lucide-react";
+import { Activity, Bell, BellOff, Bookmark, Check, ChevronDown, ChevronRight, ChevronUp, Clock, Edit2, FileImage, Home, Lock, LogOut, MapPin, Minus, Package, Plus, Printer, RefreshCw, Search, ShoppingCart, Star, Trash2, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -113,6 +113,11 @@ export default function UserDashboard() {
   const [profileName, setProfileName] = useState(user?.fullName ?? "");
   const [profilePhone, setProfilePhone] = useState(user?.phone ?? "");
   const [profileLocation, setProfileLocation] = useState(user?.location ?? "");
+  const [showChangePwd, setShowChangePwd] = useState(false);
+  const [currentPwd, setCurrentPwd] = useState("");
+  const [newPwd, setNewPwd] = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
+  const [visibleSearchCount, setVisibleSearchCount] = useState(20);
 
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("mrh_search_history") ?? "[]"); } catch { return []; }
@@ -155,6 +160,8 @@ export default function UserDashboard() {
     queryFn: () => authFetch("/api/medirush/saved-addresses"),
   });
 
+  useEffect(() => { setVisibleSearchCount(20); }, [searchQuery]);
+
   useEffect(() => {
     if (!medicines || notifyMeIds.length === 0) return;
     const back = medicines.filter(m => notifyMeIds.includes(m.id) && m.stock != null && m.stock > 0);
@@ -164,6 +171,17 @@ export default function UserDashboard() {
     localStorage.setItem("mrh_notify_me", JSON.stringify(remaining));
     setNotifyMeIds(remaining);
   }, [medicines]);
+
+  const changePassword = useMutation({
+    mutationFn: (data: { currentPassword: string; newPassword: string }) =>
+      authFetch("/api/medirush/auth/password", { method: "PATCH", body: JSON.stringify(data) }),
+    onSuccess: () => {
+      toast({ title: "Password updated successfully" });
+      setShowChangePwd(false);
+      setCurrentPwd(""); setNewPwd(""); setConfirmPwd("");
+    },
+    onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
 
   const updateProfile = useMutation({
     mutationFn: (data: { fullName: string; phone: string; location: string }) =>
@@ -488,25 +506,43 @@ export default function UserDashboard() {
               <>
                 <h2 className="font-bold text-base">{`Results for "${searchQuery}"`}</h2>
                 {filteredMedicines.length === 0 ? (
-                  <div className="text-center py-12 text-slate-400">No medicines found</div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    {filteredMedicines.map(med => <ProductCard key={med.id} med={med} size="grid" />)}
+                  <div className="text-center py-12">
+                    <Search size={36} className="mx-auto mb-3 text-slate-200" />
+                    <p className="text-slate-400">No medicines found for "{searchQuery}"</p>
                   </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      {filteredMedicines.slice(0, visibleSearchCount).map(med => <ProductCard key={med.id} med={med} size="grid" />)}
+                    </div>
+                    {filteredMedicines.length > visibleSearchCount && (
+                      <button onClick={() => setVisibleSearchCount(v => v + 20)} className="w-full py-3 text-green-700 font-bold text-sm rounded-2xl border-2 border-green-200 hover:bg-green-50 transition">
+                        Show {Math.min(20, filteredMedicines.length - visibleSearchCount)} more results
+                      </button>
+                    )}
+                    <p className="text-center text-xs text-slate-400">Showing {Math.min(visibleSearchCount, filteredMedicines.length)} of {filteredMedicines.length}</p>
+                  </>
                 )}
               </>
             ) : (
               (categoryId ? categories?.filter(c => c.id === categoryId) : categories)?.map(cat => {
                 const catMeds = medicinesByCategory.get(cat.id) ?? [];
                 if (catMeds.length === 0) return null;
+                const limit = 10;
+                const displayed = catMeds.slice(0, limit);
+                const hasMore = catMeds.length > limit;
                 return (
                   <div key={cat.id}>
                     <div className="flex items-center justify-between mb-2.5">
                       <h2 className="font-bold text-base">{cat.name}</h2>
-                      <span className="text-xs text-slate-400">{catMeds.length} item{catMeds.length !== 1 ? "s" : ""}</span>
+                      {hasMore ? (
+                        <button onClick={() => setCategoryId(cat.id)} className="text-xs text-green-600 font-semibold">See all {catMeds.length} →</button>
+                      ) : (
+                        <span className="text-xs text-slate-400">{catMeds.length} item{catMeds.length !== 1 ? "s" : ""}</span>
+                      )}
                     </div>
                     <div className="flex gap-3 overflow-x-auto pb-2 -mx-3 px-3 scrollbar-hide">
-                      {catMeds.map(med => <ProductCard key={med.id} med={med} size="scroll" />)}
+                      {displayed.map(med => <ProductCard key={med.id} med={med} size="scroll" />)}
                     </div>
                   </div>
                 );
@@ -700,6 +736,32 @@ export default function UserDashboard() {
                 <button onClick={() => deleteAddress.mutate(addr.id)} className="p-1.5 text-slate-400 hover:text-red-500"><Trash2 size={15} /></button>
               </div>
             ))}
+          </div>
+
+          {/* Change Password */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <button onClick={() => setShowChangePwd(v => !v)} className="w-full px-4 py-3.5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Lock size={15} className="text-green-600" />
+                <p className="text-sm font-bold">Change Password</p>
+              </div>
+              {showChangePwd ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
+            </button>
+            {showChangePwd && (
+              <div className="px-4 pb-4 space-y-2 border-t border-slate-100 pt-3">
+                <Input type="password" placeholder="Current password" value={currentPwd} onChange={e => setCurrentPwd(e.target.value)} className="text-sm" />
+                <Input type="password" placeholder="New password (min 6 characters)" value={newPwd} onChange={e => setNewPwd(e.target.value)} className="text-sm" />
+                <Input type="password" placeholder="Confirm new password" value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)} className="text-sm" />
+                {newPwd && confirmPwd && newPwd !== confirmPwd && (
+                  <p className="text-xs text-red-500 font-medium">Passwords don't match</p>
+                )}
+                <Button size="sm" onClick={() => changePassword.mutate({ currentPassword: currentPwd, newPassword: newPwd })}
+                  disabled={changePassword.isPending || !currentPwd || newPwd.length < 6 || newPwd !== confirmPwd}
+                  className="w-full bg-green-600 hover:bg-green-700 mt-1">
+                  {changePassword.isPending ? "Updating..." : "Update Password"}
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Help & FAQ */}

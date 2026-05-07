@@ -220,6 +220,25 @@ router.post("/auth/signup", async (req, res) => {
   res.status(201).json({ token: signToken({ id: user.id, role: user.role }), user: { id: user.id, fullName: user.fullName, phone: user.phone, email: user.email, location: user.location, role: user.role } });
 });
 
+router.patch("/auth/password", async (req, res) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const { currentPassword, newPassword } = req.body as { currentPassword: string; newPassword: string };
+  if (!currentPassword || !newPassword || newPassword.length < 6) {
+    res.status(400).json({ message: "New password must be at least 6 characters" });
+    return;
+  }
+  const { rows } = await pool.query<{ password_hash: string }>(
+    `SELECT password_hash FROM medirush_users WHERE id=$1`, [userId]
+  );
+  if (!rows[0] || !verifyPassword(currentPassword, rows[0].password_hash)) {
+    res.status(400).json({ message: "Current password is incorrect" });
+    return;
+  }
+  await pool.query(`UPDATE medirush_users SET password_hash=$1 WHERE id=$2`, [hashPassword(newPassword), userId]);
+  res.json({ message: "Password updated" });
+});
+
 router.patch("/auth/profile", async (req, res) => {
   const userId = requireUser(req, res);
   if (!userId) return;

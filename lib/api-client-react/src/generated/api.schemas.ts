@@ -67,6 +67,7 @@ export interface Medicine {
   price: number;
   mrp?: number;
   company?: string;
+  stock?: number;
   categoryId: string;
   categoryName: string;
   imageUrl: string;
@@ -80,6 +81,7 @@ export interface MedicineInput {
   price: number;
   mrp?: number;
   company?: string;
+  stock?: number;
   categoryId: string;
   imageUrl: string;
   description: string;
@@ -130,6 +132,7 @@ export interface CreateOrderRequest {
   paymentMethod: CreateOrderRequestPaymentMethod;
   prescriptionId?: string;
   deliveryAddress: string;
+  deliveryInstructions?: string;
 }
 
 export type OrderPaymentMethod =
@@ -149,9 +152,18 @@ export interface Order {
   etaMinutes: number;
   prescriptionId?: string;
   deliveryAddress: string;
+  deliveryInstructions?: string;
+  rating?: number;
   createdAt: string;
   customerName?: string;
   customerPhone?: string;
+}
+
+export interface SavedAddress {
+  id: string;
+  label: string;
+  address: string;
+  createdAt: string;
 }
 
 export interface UpdateOrderStatusRequest {

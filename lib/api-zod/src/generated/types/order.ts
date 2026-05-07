@@ -17,6 +17,8 @@ export interface Order {
   etaMinutes: number;
   prescriptionId?: string;
   deliveryAddress: string;
+  deliveryInstructions?: string;
+  rating?: number;
   createdAt: string;
   customerName?: string;
   customerPhone?: string;

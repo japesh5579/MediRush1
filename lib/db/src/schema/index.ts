@@ -23,6 +23,7 @@ export const medicinesTable = pgTable("medirush_medicines", {
   price: doublePrecision("price").notNull(),
   mrp: doublePrecision("mrp"),
   company: text("company"),
+  stock: integer("stock"),
   categoryId: text("category_id").notNull(),
   imageUrl: text("image_url").notNull(),
   description: text("description").notNull(),
@@ -54,5 +55,15 @@ export const ordersTable = pgTable("medirush_orders", {
   etaMinutes: integer("eta_minutes").notNull(),
   prescriptionId: text("prescription_id"),
   deliveryAddress: text("delivery_address").notNull(),
+  deliveryInstructions: text("delivery_instructions"),
+  rating: integer("rating"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const savedAddressesTable = pgTable("medirush_saved_addresses", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  label: text("label").notNull(),
+  address: text("address").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

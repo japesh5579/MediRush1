@@ -12,6 +12,7 @@ export interface Medicine {
   price: number;
   mrp?: number;
   company?: string;
+  stock?: number;
   categoryId: string;
   categoryName: string;
   imageUrl: string;

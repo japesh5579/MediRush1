@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { sql } from "drizzle-orm";
-import { db, pool, cartItemsTable, categoriesTable, medicinesTable, ordersTable, prescriptionsTable, usersTable } from "@workspace/db";
+import { db, pool, cartItemsTable, categoriesTable, medicinesTable, ordersTable, prescriptionsTable, usersTable, savedAddressesTable } from "@workspace/db";
 import { AddCartItemBody, CreateCategoryBody, CreateMedicineBody, CreateOrderBody, DeleteCategoryParams, DeleteMedicineParams, ListMedicinesQueryParams, LoginBody, RemoveCartItemParams, SignupBody, UpdateCartItemBody, UpdateCartItemParams, UpdateMedicineBody, UpdateMedicineParams, UploadPrescriptionBody } from "@workspace/api-zod";
 import crypto from "node:crypto";
 
@@ -88,6 +88,7 @@ function serializeMedicine(medicine: MedicineRow, categories: CategoryRow[]) {
     price: medicine.price,
     mrp: medicine.mrp ?? undefined,
     company: medicine.company ?? undefined,
+    stock: (medicine as any).stock ?? undefined,
     categoryId: medicine.categoryId,
     categoryName: category?.name ?? "General",
     imageUrl: medicine.imageUrl,
@@ -130,6 +131,13 @@ async function ensureTables() {
       total DOUBLE PRECISION NOT NULL, payment_method TEXT NOT NULL, status TEXT NOT NULL,
       eta_minutes INTEGER NOT NULL, prescription_id TEXT, delivery_address TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    ALTER TABLE medirush_orders ADD COLUMN IF NOT EXISTS delivery_instructions TEXT;
+    ALTER TABLE medirush_orders ADD COLUMN IF NOT EXISTS rating INTEGER;
+    ALTER TABLE medirush_medicines ADD COLUMN IF NOT EXISTS stock INTEGER;
+    CREATE TABLE IF NOT EXISTS medirush_saved_addresses (
+      id TEXT PRIMARY KEY, user_id TEXT NOT NULL, label TEXT NOT NULL,
+      address TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `);
 }
@@ -237,8 +245,8 @@ router.post("/medicines", async (req, res) => {
   const body = CreateMedicineBody.parse(req.body);
   const medicine = { id: id("med"), ...body };
   await pool.query(
-    `INSERT INTO medirush_medicines (id, name, price, mrp, company, category_id, image_url, description) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-    [medicine.id, medicine.name, medicine.price, medicine.mrp ?? null, medicine.company ?? null, medicine.categoryId, medicine.imageUrl, medicine.description]
+    `INSERT INTO medirush_medicines (id, name, price, mrp, company, stock, category_id, image_url, description) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+    [medicine.id, medicine.name, medicine.price, medicine.mrp ?? null, medicine.company ?? null, (medicine as any).stock ?? null, medicine.categoryId, medicine.imageUrl, medicine.description]
   );
   const categories = await db.select().from(categoriesTable);
   res.status(201).json(serializeMedicine(medicine as any, categories));
@@ -253,6 +261,7 @@ router.put("/medicines/:id", async (req, res) => {
   if ((body as any).price !== undefined) { sets.push(`price=$${p++}`); vals.push((body as any).price); }
   if ((body as any).mrp !== undefined) { sets.push(`mrp=$${p++}`); vals.push((body as any).mrp); }
   if ((body as any).company !== undefined) { sets.push(`company=$${p++}`); vals.push((body as any).company); }
+  if ((body as any).stock !== undefined) { sets.push(`stock=$${p++}`); vals.push((body as any).stock); }
   if ((body as any).categoryId !== undefined) { sets.push(`category_id=$${p++}`); vals.push((body as any).categoryId); }
   if ((body as any).imageUrl !== undefined) { sets.push(`image_url=$${p++}`); vals.push((body as any).imageUrl); }
   if ((body as any).description !== undefined) { sets.push(`description=$${p++}`); vals.push((body as any).description); }
@@ -362,12 +371,15 @@ router.get("/orders", async (req, res) => {
     res.status(401).json({ message: "Authentication required" });
     return;
   }
-  type OrderRow = { id: string; user_id: string; items: CartLine[]; total: number; payment_method: string; status: string; eta_minutes: number; prescription_id: string | null; delivery_address: string; created_at: Date };
+  type OrderRow = { id: string; user_id: string; items: CartLine[]; total: number; payment_method: string; status: string; eta_minutes: number; prescription_id: string | null; delivery_address: string; delivery_instructions: string | null; rating: number | null; created_at: Date };
   const serializeOrder = (o: OrderRow, extra?: { customerName?: string; customerPhone?: string }) => ({
     id: o.id, userId: o.user_id, items: o.items, total: o.total,
     paymentMethod: o.payment_method as "cod" | "upi", status: o.status,
     etaMinutes: o.eta_minutes, prescriptionId: o.prescription_id ?? undefined,
-    deliveryAddress: o.delivery_address, createdAt: new Date(o.created_at).toISOString(),
+    deliveryAddress: o.delivery_address,
+    deliveryInstructions: o.delivery_instructions ?? undefined,
+    rating: o.rating ?? undefined,
+    createdAt: new Date(o.created_at).toISOString(),
     ...extra,
   });
   if (token.role === "owner") {
@@ -393,12 +405,12 @@ router.patch("/orders/:id", async (req, res) => {
     res.status(400).json({ message: "Invalid status" });
     return;
   }
-  const orderRes = await pool.query<{ id: string; user_id: string; items: CartLine[]; total: number; payment_method: string; status: string; eta_minutes: number; prescription_id: string | null; delivery_address: string; created_at: Date }>(
+  const orderRes = await pool.query<{ id: string; user_id: string; items: CartLine[]; total: number; payment_method: string; status: string; eta_minutes: number; prescription_id: string | null; delivery_address: string; delivery_instructions: string | null; rating: number | null; created_at: Date }>(
     `UPDATE medirush_orders SET status=$1 WHERE id=$2 RETURNING *`, [status, id]
   );
   if (!orderRes.rows[0]) { res.status(404).json({ message: "Order not found" }); return; }
   const row = orderRes.rows[0];
-  res.json({ id: row.id, userId: row.user_id, items: row.items, total: row.total, paymentMethod: row.payment_method as "cod" | "upi", status: row.status, etaMinutes: row.eta_minutes, prescriptionId: row.prescription_id ?? undefined, deliveryAddress: row.delivery_address, createdAt: new Date(row.created_at).toISOString() });
+  res.json({ id: row.id, userId: row.user_id, items: row.items, total: row.total, paymentMethod: row.payment_method as "cod" | "upi", status: row.status, etaMinutes: row.eta_minutes, prescriptionId: row.prescription_id ?? undefined, deliveryAddress: row.delivery_address, deliveryInstructions: row.delivery_instructions ?? undefined, rating: row.rating ?? undefined, createdAt: new Date(row.created_at).toISOString() });
 });
 
 router.post("/orders", async (req, res) => {
@@ -410,14 +422,71 @@ router.post("/orders", async (req, res) => {
     res.status(400).json({ message: "Add at least one medicine before checkout" });
     return;
   }
-  const order = { id: id("ord"), userId, items: cart.items, total: cart.total, paymentMethod: body.paymentMethod, status: "Placed", etaMinutes: 10 + Math.floor(Math.random() * 11), prescriptionId: body.prescriptionId ?? null, deliveryAddress: body.deliveryAddress };
-  const orderRes = await pool.query<{ id: string; user_id: string; items: CartLine[]; total: number; payment_method: string; status: string; eta_minutes: number; prescription_id: string | null; delivery_address: string; created_at: Date }>(
-    `INSERT INTO medirush_orders (id,user_id,items,total,payment_method,status,eta_minutes,prescription_id,delivery_address) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-    [order.id, order.userId, JSON.stringify(order.items), order.total, order.paymentMethod, order.status, order.etaMinutes, order.prescriptionId, order.deliveryAddress]
+  const order = { id: id("ord"), userId, items: cart.items, total: cart.total, paymentMethod: body.paymentMethod, status: "Placed", etaMinutes: 10 + Math.floor(Math.random() * 11), prescriptionId: body.prescriptionId ?? null, deliveryAddress: body.deliveryAddress, deliveryInstructions: body.deliveryInstructions ?? null };
+  const orderRes = await pool.query<{ id: string; user_id: string; items: CartLine[]; total: number; payment_method: string; status: string; eta_minutes: number; prescription_id: string | null; delivery_address: string; delivery_instructions: string | null; rating: number | null; created_at: Date }>(
+    `INSERT INTO medirush_orders (id,user_id,items,total,payment_method,status,eta_minutes,prescription_id,delivery_address,delivery_instructions) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+    [order.id, order.userId, JSON.stringify(order.items), order.total, order.paymentMethod, order.status, order.etaMinutes, order.prescriptionId, order.deliveryAddress, order.deliveryInstructions]
   );
   await pool.query(`DELETE FROM medirush_cart_items WHERE user_id=$1`, [userId]);
   const row = orderRes.rows[0];
-  res.status(201).json({ id: row.id, userId: row.user_id, items: row.items, total: row.total, paymentMethod: row.payment_method as "cod" | "upi", status: row.status, etaMinutes: row.eta_minutes, prescriptionId: row.prescription_id ?? undefined, deliveryAddress: row.delivery_address, createdAt: new Date(row.created_at).toISOString() });
+  res.status(201).json({ id: row.id, userId: row.user_id, items: row.items, total: row.total, paymentMethod: row.payment_method as "cod" | "upi", status: row.status, etaMinutes: row.eta_minutes, prescriptionId: row.prescription_id ?? undefined, deliveryAddress: row.delivery_address, deliveryInstructions: row.delivery_instructions ?? undefined, rating: row.rating ?? undefined, createdAt: new Date(row.created_at).toISOString() });
+});
+
+router.get("/saved-addresses", async (req, res) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const { rows } = await pool.query<{ id: string; label: string; address: string; created_at: Date }>(
+    `SELECT id, label, address, created_at FROM medirush_saved_addresses WHERE user_id=$1 ORDER BY created_at DESC`, [userId]
+  );
+  res.json(rows.map(r => ({ id: r.id, label: r.label, address: r.address, createdAt: new Date(r.created_at).toISOString() })));
+});
+
+router.post("/saved-addresses", async (req, res) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const { label, address } = req.body as { label: string; address: string };
+  if (!label?.trim() || !address?.trim()) { res.status(400).json({ message: "label and address are required" }); return; }
+  const result = await pool.query<{ id: string; label: string; address: string; created_at: Date }>(
+    `INSERT INTO medirush_saved_addresses (id,user_id,label,address) VALUES ($1,$2,$3,$4) RETURNING *`,
+    [id("addr"), userId, label.trim(), address.trim()]
+  );
+  const r = result.rows[0];
+  res.status(201).json({ id: r.id, label: r.label, address: r.address, createdAt: new Date(r.created_at).toISOString() });
+});
+
+router.delete("/saved-addresses/:id", async (req, res) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  await pool.query(`DELETE FROM medirush_saved_addresses WHERE id=$1 AND user_id=$2`, [req.params.id, userId]);
+  res.status(204).send();
+});
+
+router.post("/orders/:id/cancel", async (req, res) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const { rows } = await pool.query<{ status: string; user_id: string }>(
+    `SELECT status, user_id FROM medirush_orders WHERE id=$1`, [req.params.id]
+  );
+  const order = rows[0];
+  if (!order) { res.status(404).json({ message: "Order not found" }); return; }
+  if (order.user_id !== userId) { res.status(403).json({ message: "Forbidden" }); return; }
+  if (order.status !== "Placed") { res.status(400).json({ message: "Order cannot be cancelled anymore" }); return; }
+  await pool.query(`UPDATE medirush_orders SET status='Cancelled' WHERE id=$1`, [req.params.id]);
+  res.json({ message: "Order cancelled" });
+});
+
+router.post("/orders/:id/rate", async (req, res) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const rating = Number((req.body as any).rating);
+  if (!rating || rating < 1 || rating > 5) { res.status(400).json({ message: "Rating must be 1 to 5" }); return; }
+  const { rows } = await pool.query<{ user_id: string }>(
+    `SELECT user_id FROM medirush_orders WHERE id=$1`, [req.params.id]
+  );
+  if (!rows[0]) { res.status(404).json({ message: "Order not found" }); return; }
+  if (rows[0].user_id !== userId) { res.status(403).json({ message: "Forbidden" }); return; }
+  await pool.query(`UPDATE medirush_orders SET rating=$1 WHERE id=$2`, [rating, req.params.id]);
+  res.json({ message: "Rated" });
 });
 
 router.get("/dashboard/summary", async (_req, res) => {

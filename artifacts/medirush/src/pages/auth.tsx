@@ -80,7 +80,7 @@ export default function AuthPage() {
                   <FormItem>
                     <Label>Email or Phone</Label>
                     <FormControl>
-                      <Input autoComplete="username" placeholder="user@medirush.com" {...field} />
+                      <Input autoComplete="username" placeholder="Enter your email or phone" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -93,7 +93,7 @@ export default function AuthPage() {
                   <FormItem>
                     <Label>Password</Label>
                     <FormControl>
-                      <Input type="password" autoComplete="current-password" placeholder="user123" {...field} />
+                      <Input type="password" autoComplete="current-password" placeholder="Enter your password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -105,10 +105,7 @@ export default function AuthPage() {
             </form>
           </Form>
         </CardContent>
-        <div className="px-6 pb-4 text-xs text-muted-foreground">
-          Demo user: user@medirush.com / user123<br />
-          Demo owner: owner@medirush.com / owner123
-        </div>
+
         <CardFooter className="flex justify-center border-t p-4">
           <p className="text-sm text-muted-foreground">
             Don't have an account?{" "}

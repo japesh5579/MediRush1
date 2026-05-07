@@ -67,6 +67,7 @@ export const ListMedicinesResponseItem = zod.object({
   price: zod.number(),
   mrp: zod.number().optional(),
   company: zod.string().optional(),
+  stock: zod.number().int().optional(),
   categoryId: zod.string(),
   categoryName: zod.string(),
   imageUrl: zod.string(),
@@ -84,6 +85,7 @@ export const CreateMedicineBody = zod.object({
   price: zod.number().min(1),
   mrp: zod.number().optional(),
   company: zod.string().optional(),
+  stock: zod.number().int().min(0).optional(),
   categoryId: zod.string(),
   imageUrl: zod.string(),
   description: zod.string(),
@@ -103,6 +105,7 @@ export const UpdateMedicineBody = zod.object({
   price: zod.number().min(1),
   mrp: zod.number().optional(),
   company: zod.string().optional(),
+  stock: zod.number().int().min(0).optional(),
   categoryId: zod.string(),
   imageUrl: zod.string(),
   description: zod.string(),
@@ -296,6 +299,7 @@ export const ListOrdersResponseItem = zod.object({
         id: zod.string(),
         name: zod.string(),
         price: zod.number(),
+        stock: zod.number().optional(),
         categoryId: zod.string(),
         categoryName: zod.string(),
         imageUrl: zod.string(),
@@ -310,6 +314,8 @@ export const ListOrdersResponseItem = zod.object({
   etaMinutes: zod.number(),
   prescriptionId: zod.string().optional(),
   deliveryAddress: zod.string(),
+  deliveryInstructions: zod.string().optional(),
+  rating: zod.number().optional(),
   createdAt: zod.string(),
 });
 export const ListOrdersResponse = zod.array(ListOrdersResponseItem);
@@ -321,6 +327,7 @@ export const CreateOrderBody = zod.object({
   paymentMethod: zod.enum(["cod", "upi"]),
   prescriptionId: zod.string().optional(),
   deliveryAddress: zod.string(),
+  deliveryInstructions: zod.string().optional(),
 });
 
 /**

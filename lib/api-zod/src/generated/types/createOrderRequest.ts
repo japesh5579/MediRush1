@@ -11,4 +11,5 @@ export interface CreateOrderRequest {
   paymentMethod: CreateOrderRequestPaymentMethod;
   prescriptionId?: string;
   deliveryAddress: string;
+  deliveryInstructions?: string;
 }

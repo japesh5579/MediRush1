@@ -217,6 +217,10 @@ async function ensureOtcProducts() {
     "Thyroid Care":      "cat_thyroid",
     "Vaccines":          "cat_vaccines",
     "Oncology":          "cat_oncology",
+    "Health Drinks":     "cat_health_drinks",
+    "Medical Devices":   "cat_medical_devices",
+    "Feminine Care":     "cat_feminine_care",
+    "Grooming":          "cat_grooming",
   };
   for (const [name, catId] of Object.entries(cats)) {
     await pool.query(`INSERT INTO medirush_categories (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`, [catId, name]);
@@ -738,6 +742,128 @@ async function ensureOtcProducts() {
     { id: "med_terbest_cream",       name: "Terbest Cream",                company: "Sun Pharma",              catId: "cat_skin_care",    mrp: 165,  price: 148.50, desc: "Terbinafine antifungal cream for athlete's foot, ringworm, and fungal nail infections." },
     { id: "med_nizral_shampoo",      name: "Nizral Shampoo",               company: "Johnson & Johnson",       catId: "cat_personal_hygiene", mrp: 325, price: 292.50, desc: "Ketoconazole 2% shampoo for dandruff, seborrhoeic dermatitis, and scalp fungal infections." },
     { id: "med_scalpe_plus",         name: "Scalpe Plus Shampoo",          company: "Glenmark Pharmaceuticals",catId: "cat_personal_hygiene", mrp: 345, price: 310.50, desc: "Ciclopirox olamine shampoo for seborrhoeic dermatitis and resistant dandruff." },
+
+    // ── Health Drinks & Nutrition ──────────────────────────────
+    { id: "med_horlicks_classic",    name: "Horlicks Classic 1kg",         company: "Horlicks India",          catId: "cat_health_drinks",    mrp: 549,  price: 494.10, desc: "Classic malted milk drink with vitamins and minerals for strength and energy." },
+    { id: "med_boost_drink",         name: "Boost Energy Drink",           company: "GSK India",               catId: "cat_health_drinks",    mrp: 499,  price: 449.10, desc: "Chocolate energy drink with 3× more stamina nutrients for active children." },
+    { id: "med_bournvita",           name: "Bournvita Health Drink",       company: "Mondelez India",          catId: "cat_health_drinks",    mrp: 525,  price: 472.50, desc: "Chocolate-flavoured health drink with calcium, vitamins, and iron for children." },
+    { id: "med_complan",             name: "Complan Nutrition Drink",      company: "Complan India",           catId: "cat_health_drinks",    mrp: 445,  price: 400.50, desc: "Complete planned nutritional drink with 34 nutrients for height and growth." },
+    { id: "med_pediasure_powder",    name: "Pediasure Powder",             company: "Abbott India",            catId: "cat_health_drinks",    mrp: 799,  price: 719.10, desc: "Complete nutritional supplement powder for children 2-10 years for healthy growth." },
+    { id: "med_ensure_vanilla",      name: "Ensure Vanilla",               company: "Abbott India",            catId: "cat_health_drinks",    mrp: 875,  price: 787.50, desc: "Adult nutritional shake in vanilla flavour for strength, immunity, and muscle health." },
+    { id: "med_protinex",            name: "Protinex Original",            company: "Danone India",            catId: "cat_health_drinks",    mrp: 595,  price: 535.50, desc: "High-protein health drink with whey and soy protein for muscle strength and recovery." },
+    { id: "med_dabur_glucose",       name: "Dabur Glucose D",              company: "Dabur India",             catId: "cat_hydration",        mrp: 180,  price: 162.00, desc: "Instant glucose powder with vitamins for quick energy replenishment and dehydration." },
+    { id: "med_orsl",                name: "ORSL Electrolyte Drink",       company: "Johnson & Johnson",       catId: "cat_hydration",        mrp: 85,   price: 76.50,  desc: "Oral rehydration solution with electrolytes for dehydration and fluid loss." },
+    { id: "med_fastup_reload",       name: "Fast&Up Reload",               company: "Fast&Up India",           catId: "cat_hydration",        mrp: 399,  price: 359.10, desc: "Effervescent electrolyte tablet with zinc and vitamins for hydration and recovery." },
+
+    // ── Ayurvedic & Natural ──────────────────────────────
+    { id: "med_patanjali_aloe",      name: "Patanjali Aloe Vera Juice",    company: "Patanjali Ayurved",       catId: "cat_ayurvedic",        mrp: 200,  price: 180.00, desc: "Pure aloe vera juice for digestion, skin health, immunity, and detoxification." },
+    { id: "med_baidyanath_chyw",     name: "Baidyanath Chyawanprash",      company: "Baidyanath",              catId: "cat_ayurvedic",        mrp: 420,  price: 378.00, desc: "Traditional ayurvedic chyawanprash with amla and herbs for immunity and vitality." },
+    { id: "med_zandu_kesari",        name: "Zandu Kesari Jivan",           company: "Zandu Care",              catId: "cat_ayurvedic",        mrp: 310,  price: 279.00, desc: "Ayurvedic tonic with kesari (saffron) and herbs for strength and rejuvenation." },
+    { id: "med_liv52_syrup_hw",      name: "Liv.52 Syrup",                 company: "Himalaya Wellness",       catId: "cat_ayurvedic",        mrp: 145,  price: 130.50, desc: "Herbal liver syrup for liver protection and appetite improvement." },
+    { id: "med_septilin_hw",         name: "Septilin Tablets",             company: "Himalaya Wellness",       catId: "cat_ayurvedic",        mrp: 165,  price: 148.50, desc: "Herbal immunomodulator for recurrent infections and immunity enhancement." },
+    { id: "med_ashvagandha_hw",      name: "Ashwagandha Tablets",          company: "Himalaya Wellness",       catId: "cat_ayurvedic",        mrp: 210,  price: 189.00, desc: "Ashwagandha adaptogen for stress relief, energy, and general wellness." },
+    { id: "med_dabur_triphala",      name: "Dabur Triphala Churna",        company: "Dabur India",             catId: "cat_ayurvedic",        mrp: 120,  price: 108.00, desc: "Triphala churna for digestive health, constipation relief, and gut cleansing." },
+    { id: "med_patanjali_giloy",     name: "Patanjali Giloy Juice",        company: "Patanjali Ayurved",       catId: "cat_ayurvedic",        mrp: 190,  price: 171.00, desc: "Giloy (guduchi) juice for immunity, fever, and chronic inflammatory conditions." },
+    { id: "med_charak_m2tone",       name: "Charak M2 Tone",               company: "Charak Pharma",          catId: "cat_womens_health",    mrp: 215,  price: 193.50, desc: "Ayurvedic tablet for irregular periods, PCOS, and hormonal imbalance in women." },
+    { id: "med_dabur_lal_tail",      name: "Dabur Lal Tail",               company: "Dabur India",             catId: "cat_ayurvedic",        mrp: 165,  price: 148.50, desc: "Ayurvedic baby massage oil with natural herbs for bone strength and growth." },
+    { id: "med_dabur_honey",         name: "Dabur Honey 500g",             company: "Dabur India",             catId: "cat_ayurvedic",        mrp: 325,  price: 292.50, desc: "Pure natural honey for immunity, energy, digestion, and as a healthy sweetener." },
+    { id: "med_patanjali_honey",     name: "Patanjali Honey",              company: "Patanjali Ayurved",       catId: "cat_ayurvedic",        mrp: 299,  price: 269.10, desc: "Natural bee honey for immunity, cough relief, and as a healthy sugar substitute." },
+    { id: "med_himalaya_liv52_tab",  name: "Himalaya Liv.52 Tablets",      company: "Himalaya Wellness",       catId: "cat_ayurvedic",        mrp: 155,  price: 139.50, desc: "Herbal liver tablets for hepatic support, appetite, and liver enzyme normalisation." },
+
+    // ── Throat & Oral ──────────────────────────────
+    { id: "med_nicotex_2mg",         name: "Nicotex 2mg Gum",              company: "Cipla",                   catId: "cat_personal_hygiene", mrp: 399,  price: 359.10, desc: "Nicotine replacement therapy gum for smoking cessation and nicotine withdrawal." },
+    { id: "med_strepsils_orange",    name: "Strepsils Orange",             company: "Reckitt",                 catId: "cat_cold_cough",       mrp: 38,   price: 34.20,  desc: "Orange-flavoured antibacterial throat lozenges for sore throat and oral infections." },
+    { id: "med_vicks_cough_drops",   name: "Vicks Cough Drops",            company: "Procter & Gamble",        catId: "cat_cold_cough",       mrp: 30,   price: 27.00,  desc: "Menthol lozenges for soothing sore throat and temporary cough relief." },
+    { id: "med_cofsils",             name: "Cofsils Lozenges",             company: "Piramal Healthcare",      catId: "cat_cold_cough",       mrp: 35,   price: 31.50,  desc: "Antibacterial lozenges with benzocaine for sore throat pain and infection relief." },
+
+    // ── Skin & Topical Care ──────────────────────────────
+    { id: "med_boroline_cream",      name: "Boroline Cream",               company: "G.D. Pharmaceuticals",   catId: "cat_skin_care",        mrp: 42,   price: 37.80,  desc: "Antiseptic night cream with boric acid and zinc oxide for skin protection." },
+    { id: "med_boroplus_emi",        name: "Boroplus Antiseptic Cream",    company: "Emami Limited",           catId: "cat_skin_care",        mrp: 110,  price: 99.00,  desc: "Antiseptic cream with neem and tulsi for skin protection and winter care." },
+    { id: "med_vicco_turmeric",      name: "Vicco Turmeric Cream",         company: "Vicco Laboratories",     catId: "cat_skin_care",        mrp: 145,  price: 130.50, desc: "Turmeric-based cream for fair complexion, pimples, and natural skin glow." },
+    { id: "med_dermicool_pwd",       name: "Dermicool Powder",             company: "Emami Limited",           catId: "cat_personal_hygiene", mrp: 135,  price: 121.50, desc: "Prickly heat powder with menthol for cooling, rash prevention, and freshness." },
+    { id: "med_nycil_powder",        name: "Nycil Cool Powder",            company: "Heinz India",             catId: "cat_personal_hygiene", mrp: 155,  price: 139.50, desc: "Cool talc powder for prickly heat, sweating, and body odour control." },
+    { id: "med_candid_dust_pwd",     name: "Candid Dusting Powder",        company: "Glenmark Pharmaceuticals",catId: "cat_skin_care",        mrp: 165,  price: 148.50, desc: "Clotrimazole antifungal dusting powder for tinea, intertrigo, and fungal skin infections." },
+    { id: "med_sugar_free_gold",     name: "Sugar Free Gold",              company: "Zydus Wellness",          catId: "cat_diabetes",         mrp: 145,  price: 130.50, desc: "Aspartame-based zero-calorie sweetener for diabetics and calorie-conscious individuals." },
+    { id: "med_cetaphil_lotion",     name: "Cetaphil Moisturising Lotion", company: "Galderma India",          catId: "cat_skin_care",        mrp: 495,  price: 445.50, desc: "Dermatologist-recommended gentle moisturiser for normal to combination sensitive skin." },
+    { id: "med_venusia_max",         name: "Venusia Max Cream",            company: "Dr. Reddy's Laboratories",catId: "cat_skin_care",        mrp: 395,  price: 355.50, desc: "Intensive moisturising cream with ceramides and glycerine for very dry skin." },
+    { id: "med_moisturex_cream",     name: "Moisturex Cream",              company: "Sun Pharma",              catId: "cat_skin_care",        mrp: 355,  price: 319.50, desc: "Paraffin-based emollient cream for dry, chapped, and eczema-prone skin." },
+    { id: "med_emolene_cream",       name: "Emolene Cream",                company: "Fulford India",           catId: "cat_skin_care",        mrp: 345,  price: 310.50, desc: "Emollient cream with white soft paraffin for dry, scaly, and atopic dermatitis skin." },
+    { id: "med_venusia_lotion",      name: "Venusia Lotion",               company: "Dr. Reddy's Laboratories",catId: "cat_skin_care",        mrp: 420,  price: 378.00, desc: "Light moisturising lotion with ceramides for daily use on dry and sensitive skin." },
+    { id: "med_cetaphil_dam",        name: "Cetaphil DAM Lotion",          company: "Galderma India",          catId: "cat_skin_care",        mrp: 550,  price: 495.00, desc: "Daily Advance Moisturiser for eczema-prone skin with extra hydration." },
+
+    // ── Vitamins (extended) ──────────────────────────────
+    { id: "med_revital_h_woman",     name: "Revital H Woman",              company: "Sun Pharma",              catId: "cat_multivitamins",    mrp: 345,  price: 310.50, desc: "Women's multivitamin with iron, calcium, and ginseng for energy and vitality." },
+    { id: "med_revital_h_man",       name: "Revital H Man",                company: "Sun Pharma",              catId: "cat_multivitamins",    mrp: 345,  price: 310.50, desc: "Men's multivitamin with zinc, selenium, and ginseng for stamina and vitality." },
+    { id: "med_calcigen_d3",         name: "Calcigen D3 Sachet",           company: "Cadila Pharmaceuticals",  catId: "cat_calcium",          mrp: 110,  price: 99.00,  desc: "Calcium + Vitamin D3 sachet for bone health and calcium deficiency correction." },
+    { id: "med_shelcal_hd",          name: "Shelcal HD",                   company: "Torrent Pharmaceuticals", catId: "cat_calcium",          mrp: 245,  price: 220.50, desc: "High-dose calcium + Vitamin D3 + Vitamin K2 for severe osteoporosis and fracture prevention." },
+    { id: "med_uprise_d3_nano",      name: "Uprise D3 Nano Shot",          company: "Alkem Laboratories",      catId: "cat_vitamins",         mrp: 98,   price: 88.20,  desc: "Vitamin D3 nano-sized oral solution for rapid absorption and deficiency correction." },
+    { id: "med_neurobion_inj",       name: "Neurobion Injection",          company: "Procter & Gamble Health", catId: "cat_vitamins",         mrp: 75,   price: 67.50,  desc: "Vitamin B1, B6, B12 injection for severe neuropathy and deficiency conditions." },
+    { id: "med_dexorange_caps",      name: "Dexorange Capsules",           company: "Franco-Indian Pharma",    catId: "cat_vitamins",         mrp: 135,  price: 121.50, desc: "Iron + Folic acid + Vitamin B12 capsule for anaemia and iron deficiency." },
+    { id: "med_feronia_xt",          name: "Feronia XT Tablets",           company: "Emcure Pharmaceuticals",  catId: "cat_vitamins",         mrp: 210,  price: 189.00, desc: "Ferric carboxymaltose + Folic acid for iron deficiency anaemia in pregnancy." },
+    { id: "med_becadexamin_syrup",   name: "Becadexamin Syrup",            company: "GSK India",               catId: "cat_vitamins",         mrp: 145,  price: 130.50, desc: "B-complex + Vitamin A, D, E syrup for children's nutritional supplementation." },
+
+    // ── Personal Care & Hygiene ──────────────────────────────
+    { id: "med_dabur_red_tp",        name: "Dabur Red Toothpaste",         company: "Dabur India",             catId: "cat_personal_hygiene", mrp: 135,  price: 121.50, desc: "Ayurvedic toothpaste with clove, mint, and herbs for strong teeth and fresh breath." },
+    { id: "med_himalaya_care_tp",    name: "Himalaya Complete Care Paste", company: "Himalaya Wellness",       catId: "cat_personal_hygiene", mrp: 120,  price: 108.00, desc: "Herbal toothpaste with pomegranate and neem for complete oral care." },
+    { id: "med_senquel_f",           name: "Senquel F Toothpaste",         company: "Dr. Reddy's Laboratories",catId: "cat_personal_hygiene", mrp: 195,  price: 175.50, desc: "Fluoride toothpaste for sensitive teeth with strontium acetate for pain relief." },
+    { id: "med_veet_cream",          name: "Veet Hair Removal Cream",      company: "Reckitt",                 catId: "cat_personal_hygiene", mrp: 125,  price: 112.50, desc: "Fast-acting depilatory cream for smooth hair removal from legs, arms, and underarms." },
+    { id: "med_nivea_men_fw",        name: "Nivea Men Face Wash",          company: "Nivea India",             catId: "cat_personal_hygiene", mrp: 199,  price: 179.10, desc: "Men's face wash with deep cleansing formula for oil control and fresh skin." },
+    { id: "med_dove_soap",           name: "Dove Soap Pack",               company: "HUL India",               catId: "cat_personal_hygiene", mrp: 240,  price: 216.00, desc: "Moisturising beauty bar with 1/4 cream for soft, nourished skin." },
+    { id: "med_pears_soap",          name: "Pears Pure Soap",              company: "HUL India",               catId: "cat_personal_hygiene", mrp: 180,  price: 162.00, desc: "Transparent glycerine soap for gentle cleansing and soft, healthy skin." },
+    { id: "med_dettol_handwash",     name: "Dettol Handwash",              company: "Reckitt",                 catId: "cat_personal_hygiene", mrp: 110,  price: 99.00,  desc: "Antibacterial liquid handwash for protection against 99.9% germs." },
+    { id: "med_lifebuoy_hw",         name: "Lifebuoy Handwash",            company: "HUL India",               catId: "cat_personal_hygiene", mrp: 99,   price: 89.10,  desc: "Germ-protection handwash for complete family hygiene and skin care." },
+    { id: "med_savlon_sanitizer",    name: "Savlon Hand Sanitizer",        company: "ITC India",               catId: "cat_first_aid",        mrp: 85,   price: 76.50,  desc: "70% isopropyl alcohol hand sanitizer for effective germ kill without water." },
+    { id: "med_sterillium",          name: "Sterillium Sanitizer",         company: "Bode Chemie",             catId: "cat_first_aid",        mrp: 250,  price: 225.00, desc: "Hospital-grade hygienic hand rub for rapid disinfection and skin tolerance." },
+    { id: "med_n95_mask",            name: "N95 Face Mask",                company: "Venus Safety",            catId: "cat_first_aid",        mrp: 150,  price: 135.00, desc: "N95 particulate respirator mask for protection from airborne pollutants and pathogens." },
+
+    // ── Medical Devices ──────────────────────────────
+    { id: "med_flamingo_heat_pad",   name: "Flamingo Heating Pad",         company: "Flamingo Healthcare",     catId: "cat_medical_devices",  mrp: 1450, price: 1305.00, desc: "Electric heating pad for pain relief from arthritis, back pain, and muscle stiffness." },
+    { id: "med_accusure_scale",      name: "AccuSure Weighing Scale",      company: "AccuSure India",          catId: "cat_medical_devices",  mrp: 1299, price: 1169.10, desc: "Digital body weighing scale with step-on technology and high accuracy." },
+    { id: "med_drtrust_oximeter",    name: "Dr Trust Oximeter",            company: "Dr Trust",                catId: "cat_medical_devices",  mrp: 2199, price: 1979.10, desc: "Fingertip pulse oximeter to measure blood oxygen saturation (SpO2) and heart rate." },
+    { id: "med_beurer_bp",           name: "Beurer BP Monitor",            company: "Beurer India",            catId: "cat_medical_devices",  mrp: 2899, price: 2609.10, desc: "Automatic upper arm BP monitor with arrhythmia detection and memory function." },
+    { id: "med_omron_bp",            name: "Omron Digital BP Machine",     company: "Omron Healthcare",        catId: "cat_medical_devices",  mrp: 3499, price: 3149.10, desc: "Clinically validated digital BP machine with irregular heartbeat indicator." },
+
+    // ── Baby Care ──────────────────────────────
+    { id: "med_johnsons_baby_shamp", name: "Johnson's Baby Shampoo",       company: "Johnson & Johnson",       catId: "cat_baby_care",        mrp: 185,  price: 166.50, desc: "Tear-free baby shampoo with No More Tears formula for gentle and safe hair washing." },
+    { id: "med_sebamed_baby_soap",   name: "Sebamed Baby Soap",            company: "Sebamed India",           catId: "cat_baby_care",        mrp: 299,  price: 269.10, desc: "pH 5.5 baby soap for sensitive baby skin with syndet formula." },
+    { id: "med_meemee_wipes",        name: "Mee Mee Baby Wipes",           company: "Mee Mee",                 catId: "cat_baby_care",        mrp: 225,  price: 202.50, desc: "Soft baby wipes with aloe vera for gentle cleaning of baby's delicate skin." },
+    { id: "med_himalaya_baby_cre2",  name: "Himalaya Baby Cream",          company: "Himalaya Wellness",       catId: "cat_baby_care",        mrp: 165,  price: 148.50, desc: "Gentle moisturising baby cream for soft, healthy, and nourished baby skin." },
+    { id: "med_drypers_diapers",     name: "Drypers Baby Diapers",         company: "Drypers India",           catId: "cat_baby_care",        mrp: 499,  price: 449.10, desc: "Soft baby diapers with absorbent core for all-night dryness and rash prevention." },
+
+    // ── Feminine Care ──────────────────────────────
+    { id: "med_friends_adult_dpr",   name: "Friends Adult Diapers",        company: "Nobel Hygiene",           catId: "cat_personal_hygiene", mrp: 650,  price: 585.00, desc: "Adult diapers for moderate to heavy incontinence with superior absorption." },
+    { id: "med_whisper_xl",          name: "Whisper Choice XL",            company: "Procter & Gamble",        catId: "cat_feminine_care",    mrp: 145,  price: 130.50, desc: "XL-size sanitary pads for heavy flow days with leak-guard protection." },
+    { id: "med_stayfree_all_night",  name: "Stayfree All Night Pads",      company: "Johnson & Johnson",       catId: "cat_feminine_care",    mrp: 210,  price: 189.00, desc: "Ultra-thin overnight pads with 360° leak protection for heavy menstrual flow." },
+    { id: "med_sofy_xl",             name: "Sofy Bodyfit XL",              company: "Unicharm India",          catId: "cat_feminine_care",    mrp: 225,  price: 202.50, desc: "Body-contour XL sanitary pads for active days with extra coverage." },
+    { id: "med_paree_pads",          name: "Paree Sanitary Pads",          company: "Paree",                   catId: "cat_feminine_care",    mrp: 199,  price: 179.10, desc: "Biodegradable sanitary pads with soft cottony top for comfortable period care." },
+    { id: "med_sirona_cup",          name: "Sirona Menstrual Cup",         company: "Sirona India",            catId: "cat_feminine_care",    mrp: 399,  price: 359.10, desc: "Medical-grade silicone menstrual cup for up to 12-hour leak-free protection." },
+    { id: "med_peesafe_spray",       name: "Pee Safe Toilet Spray",        company: "Pee Safe",                catId: "cat_feminine_care",    mrp: 175,  price: 157.50, desc: "Toilet seat sanitizer spray for protection against germs and infections in public toilets." },
+    { id: "med_vwash_wipes",         name: "VWash Wipes",                  company: "Glenmark Pharmaceuticals",catId: "cat_feminine_care",    mrp: 120,  price: 108.00, desc: "pH-balanced intimate hygiene wipes for gentle freshness and protection on the go." },
+    { id: "med_everteen_rollon",     name: "Everteen Cramp Relief Roll On",company: "NAD Wellness",            catId: "cat_feminine_care",    mrp: 180,  price: 162.00, desc: "Menthol roll-on for quick relief from menstrual cramps and period discomfort." },
+
+    // ── Hair Care ──────────────────────────────
+    { id: "med_dabur_amla_oil",      name: "Dabur Amla Hair Oil",          company: "Dabur India",             catId: "cat_personal_hygiene", mrp: 165,  price: 148.50, desc: "Amla-enriched hair oil for stronger, thicker, and shinier hair." },
+    { id: "med_parachute_oil",       name: "Parachute Coconut Oil",        company: "Marico India",            catId: "cat_personal_hygiene", mrp: 210,  price: 189.00, desc: "Pure coconut oil for hair nourishment, scalp health, and conditioning." },
+    { id: "med_navratna_oil",        name: "Navratna Cool Oil",            company: "Emami Limited",           catId: "cat_personal_hygiene", mrp: 145,  price: 130.50, desc: "9-herb cool oil for stress relief, cooling, and scalp nourishment." },
+    { id: "med_indulekha_oil",       name: "Indulekha Bringha Oil",        company: "HUL India",               catId: "cat_personal_hygiene", mrp: 432,  price: 388.80, desc: "Bringharaj-based ayurvedic hair oil for hair fall control and new hair growth." },
+    { id: "med_head_shoulders",      name: "Head & Shoulders Shampoo",     company: "Procter & Gamble",        catId: "cat_personal_hygiene", mrp: 299,  price: 269.10, desc: "Anti-dandruff shampoo with zinc pyrithione for scalp health and flake-free hair." },
+    { id: "med_clinic_plus",         name: "Clinic Plus Shampoo",          company: "HUL India",               catId: "cat_personal_hygiene", mrp: 185,  price: 166.50, desc: "Protein-enriched family shampoo for strong, shiny, and healthy hair." },
+    { id: "med_pantene_hfc",         name: "Pantene Hair Fall Control",    company: "Procter & Gamble",        catId: "cat_personal_hygiene", mrp: 320,  price: 288.00, desc: "Keratin-fortified shampoo for reducing hair fall and strengthening hair roots." },
+    { id: "med_dove_hair_shamp",     name: "Dove Hair Therapy Shampoo",    company: "HUL India",               catId: "cat_personal_hygiene", mrp: 310,  price: 279.00, desc: "Intensive repair shampoo with Keratin Tri-Silk serum for damaged hair." },
+    { id: "med_sunsilk_shamp",       name: "Sunsilk Black Shine Shampoo",  company: "HUL India",               catId: "cat_personal_hygiene", mrp: 245,  price: 220.50, desc: "Black shine shampoo with amla for glossy, smooth, and healthy black hair." },
+    { id: "med_tresemme_shamp",      name: "Tresemme Keratin Shampoo",     company: "HUL India",               catId: "cat_personal_hygiene", mrp: 525,  price: 472.50, desc: "Professional keratin smooth shampoo for frizz control and silk-smooth hair." },
+
+    // ── Grooming ──────────────────────────────
+    { id: "med_gillette_mach3",      name: "Gillette Mach3 Razor",         company: "Procter & Gamble",        catId: "cat_grooming",         mrp: 399,  price: 359.10, desc: "3-blade precision razor for a close, comfortable, and irritation-free shave." },
+    { id: "med_park_avenue_shave",   name: "Park Avenue Shaving Cream",    company: "Raymond Limited",         catId: "cat_grooming",         mrp: 95,   price: 85.50,  desc: "Rich lather shaving cream for smooth shave and skin protection." },
+    { id: "med_old_spice_aftershave",name: "Old Spice After Shave",        company: "Procter & Gamble",        catId: "cat_grooming",         mrp: 245,  price: 220.50, desc: "Classic after shave lotion for skin cooling, soothing, and fresh masculine fragrance." },
+    { id: "med_nivea_men_deo",       name: "Nivea Men Deodorant",          company: "Nivea India",             catId: "cat_grooming",         mrp: 299,  price: 269.10, desc: "48-hour protection men's deodorant for freshness and odour control." },
+    { id: "med_axe_bodyspray",       name: "Axe Signature Body Spray",     company: "HUL India",               catId: "cat_grooming",         mrp: 275,  price: 247.50, desc: "Long-lasting signature fragrance body spray for all-day freshness." },
+    { id: "med_engage_cologne",      name: "Engage Cologne Spray",         company: "ITC India",               catId: "cat_grooming",         mrp: 225,  price: 202.50, desc: "Cologne spray for men with fresh aquatic fragrance and long-lasting effect." },
+    { id: "med_fogg_bodyspray",      name: "Fogg Body Spray",              company: "Vini Cosmetics",          catId: "cat_grooming",         mrp: 275,  price: 247.50, desc: "No-gas body spray with concentrated perfume for long-lasting freshness." },
+    { id: "med_wild_stone_deo",      name: "Wild Stone Deodorant",         company: "McNroe Consumer Products",catId: "cat_grooming",         mrp: 250,  price: 225.00, desc: "Classic men's deodorant for strong, long-lasting fragrance and sweat control." },
+    { id: "med_yardley_deo",         name: "Yardley London Deo",           company: "Wipro Consumer Care",     catId: "cat_grooming",         mrp: 299,  price: 269.10, desc: "English lavender deodorant body spray for feminine freshness and elegance." },
+    { id: "med_denver_perfume",      name: "Denver Hamilton Perfume",      company: "Denver India",            catId: "cat_grooming",         mrp: 450,  price: 405.00, desc: "Premium Hamilton perfume for men with woody, spicy, and masculine fragrance." },
 
   ];
 

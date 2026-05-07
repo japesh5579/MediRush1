@@ -209,6 +209,8 @@ async function ensureOtcProducts() {
     "Antibiotics":       "cat_antibiotics",
     "Eye & Ear Care":    "cat_eye_ear",
     "Baby Care":         "cat_baby_care",
+    "Respiratory":       "cat_respiratory",
+    "Heart & BP":        "cat_heart_bp",
   };
   for (const [name, catId] of Object.entries(cats)) {
     await pool.query(`INSERT INTO medirush_categories (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`, [catId, name]);
@@ -261,6 +263,37 @@ async function ensureOtcProducts() {
     // Baby Care
     { id: "med_gripe_water",      name: "Woodward's Gripe Water",   company: "Reckitt",                        catId: "cat_baby_care",        mrp: 58,   price: 52.20,  desc: "Classic gripe water remedy for infant colic, gas, and stomach discomfort." },
     { id: "med_johnsons_powder",  name: "Johnson's Baby Powder",    company: "Kenvue",                         catId: "cat_baby_care",        mrp: 95,   price: 85.50,  desc: "Gentle talc-free baby powder to keep skin soft, dry, and rash-free." },
+
+    // ── Cipla Medicines ───────────────────────────────────
+    // Antibiotics
+    { id: "med_ciplox_500",      name: "Ciplox 500mg",              company: "Cipla",  catId: "cat_antibiotics",  mrp: 95,   price: 85.50,  desc: "Ciprofloxacin antibiotic for urinary tract, respiratory, and skin infections." },
+    { id: "med_azithral_500",    name: "Azithral 500mg",            company: "Cipla",  catId: "cat_antibiotics",  mrp: 85,   price: 76.50,  desc: "Azithromycin antibiotic for throat, ear, chest, and skin infections." },
+    { id: "med_clavam_625",      name: "Clavam 625mg",              company: "Cipla",  catId: "cat_antibiotics",  mrp: 185,  price: 166.50, desc: "Amoxicillin + Clavulanate broad-spectrum antibiotic tablet." },
+    // Respiratory
+    { id: "med_asthalin_inhaler",name: "Asthalin Inhaler",          company: "Cipla",  catId: "cat_respiratory",  mrp: 120,  price: 108.00, desc: "Salbutamol inhaler for quick relief from asthma and bronchospasm." },
+    { id: "med_budecort_inhaler",name: "Budecort 200 Inhaler",      company: "Cipla",  catId: "cat_respiratory",  mrp: 310,  price: 279.00, desc: "Budesonide inhaler for long-term asthma and COPD management." },
+    { id: "med_seroflo_inhaler", name: "Seroflo 250 Inhaler",       company: "Cipla",  catId: "cat_respiratory",  mrp: 485,  price: 436.50, desc: "Fluticasone + Salmeterol combination inhaler for asthma control." },
+    { id: "med_foracort_inhaler",name: "Foracort 200 Inhaler",      company: "Cipla",  catId: "cat_respiratory",  mrp: 445,  price: 400.50, desc: "Budesonide + Formoterol inhaler for asthma and COPD." },
+    { id: "med_duolin_inhaler",  name: "Duolin Inhaler",            company: "Cipla",  catId: "cat_respiratory",  mrp: 175,  price: 157.50, desc: "Levosalbutamol + Ipratropium inhaler for bronchospasm relief." },
+    // Cold & Allergy
+    { id: "med_cetzine_10",      name: "Cetzine 10mg",              company: "Cipla",  catId: "cat_allergy",      mrp: 18,   price: 16.20,  desc: "Cetirizine antihistamine for allergic rhinitis, urticaria, and itching." },
+    { id: "med_nasivion_drops",  name: "Nasivion 0.05% Nasal Drops",company: "Cipla",  catId: "cat_cold_cough",   mrp: 55,   price: 49.50,  desc: "Oxymetazoline nasal drops for fast relief from nasal congestion." },
+    // Acidity & Stomach
+    { id: "med_omez_20",         name: "Omez 20mg",                 company: "Cipla",  catId: "cat_acidity",      mrp: 65,   price: 58.50,  desc: "Omeprazole capsule for acidity, GERD, and peptic ulcer treatment." },
+    { id: "med_pantocid_40",     name: "Pantocid 40mg",             company: "Cipla",  catId: "cat_acidity",      mrp: 72,   price: 64.80,  desc: "Pantoprazole tablet for acid reflux, gastric ulcer, and heartburn." },
+    { id: "med_neksium_40",      name: "Neksium 40mg",              company: "Cipla",  catId: "cat_acidity",      mrp: 185,  price: 166.50, desc: "Esomeprazole tablet for severe acid reflux and erosive esophagitis." },
+    // Pain & Fever
+    { id: "med_ibugesic_plus",   name: "Ibugesic Plus Tablet",      company: "Cipla",  catId: "cat_cold_care",    mrp: 32,   price: 28.80,  desc: "Ibuprofen + Paracetamol combination for fever, pain, and inflammation." },
+    { id: "med_nimulid_100",     name: "Nimulid 100mg",             company: "Cipla",  catId: "cat_pain_relief",  mrp: 28,   price: 25.20,  desc: "Nimesulide anti-inflammatory tablet for pain, fever, and arthritis." },
+    // Skin
+    { id: "med_candid_cream",    name: "Candid Cream",              company: "Cipla",  catId: "cat_skin_care",    mrp: 55,   price: 49.50,  desc: "Clotrimazole antifungal cream for ringworm, athlete's foot, and skin infections." },
+    { id: "med_betnovate_c",     name: "Betnovate C Cream",         company: "Cipla",  catId: "cat_skin_care",    mrp: 62,   price: 55.80,  desc: "Betamethasone + Clioquinol cream for eczema, psoriasis, and fungal skin infections." },
+    // Heart & BP
+    { id: "med_stamlo_5",        name: "Stamlo 5mg",                company: "Cipla",  catId: "cat_heart_bp",     mrp: 42,   price: 37.80,  desc: "Amlodipine calcium channel blocker for hypertension and angina." },
+    { id: "med_cilacar_10",      name: "Cilacar 10mg",              company: "Cipla",  catId: "cat_heart_bp",     mrp: 88,   price: 79.20,  desc: "Cilnidipine for high blood pressure with better tolerability." },
+    // Diabetes
+    { id: "med_glycomet_500",    name: "Glycomet 500mg",            company: "Cipla",  catId: "cat_diabetes",     mrp: 28,   price: 25.20,  desc: "Metformin tablet for type 2 diabetes blood sugar management." },
+    { id: "med_glucobay_25",     name: "Glucobay 25mg",             company: "Cipla",  catId: "cat_diabetes",     mrp: 55,   price: 49.50,  desc: "Acarbose tablet to control post-meal blood sugar spikes in diabetes." },
   ];
 
   for (const m of otc) {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
-import { Activity, DollarSign, Edit3, ListOrdered, LogOut, Package, Plus, Tags, Trash2 } from "lucide-react";
+import { Activity, DollarSign, Edit3, ListOrdered, LogOut, Package, Plus, Tags, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { getGetDashboardSummaryQueryKey, getListCategoriesQueryKey, getListMedicinesQueryKey, getListOrdersQueryKey, Medicine, useCreateCategory, useCreateMedicine, useDeleteCategory, useDeleteMedicine, useGetDashboardSummary, useListCategories, useListMedicines, useListOrders, useUpdateMedicine, useUpdateOrderStatus } from "@workspace/api-client-react";
 
-const emptyMedicine = { name: "", price: "", categoryId: "", imageUrl: "", description: "" };
+const emptyMedicine = { name: "", price: "", mrp: "", company: "", categoryId: "", imageUrl: "", description: "" };
 const money = (value: number) => `₹${value.toFixed(0)}`;
 
 export default function OwnerDashboard() {
@@ -94,6 +94,8 @@ export default function OwnerDashboard() {
     const data = {
       name: medicineForm.name,
       price: Number(medicineForm.price),
+      mrp: medicineForm.mrp ? Number(medicineForm.mrp) : undefined,
+      company: medicineForm.company || undefined,
       categoryId: fallbackCategory,
       imageUrl: medicineForm.imageUrl || "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='220'%3E%3Crect width='320' height='220' rx='32' fill='%2300C853'/%3E%3Ctext x='160' y='125' text-anchor='middle' font-family='Arial' font-size='28' font-weight='700' fill='white'%3EMedirush%3C/text%3E%3C/svg%3E",
       description: medicineForm.description || "Pharmacy verified medicine available for quick delivery.",
@@ -108,7 +110,15 @@ export default function OwnerDashboard() {
 
   const editMedicine = (medicine: Medicine) => {
     setEditingId(medicine.id);
-    setMedicineForm({ name: medicine.name, price: String(medicine.price), categoryId: medicine.categoryId, imageUrl: medicine.imageUrl, description: medicine.description });
+    setMedicineForm({
+      name: medicine.name,
+      price: String(medicine.price),
+      mrp: medicine.mrp ? String(medicine.mrp) : "",
+      company: medicine.company ?? "",
+      categoryId: medicine.categoryId,
+      imageUrl: medicine.imageUrl,
+      description: medicine.description,
+    });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -155,28 +165,56 @@ export default function OwnerDashboard() {
             <CardContent className="grid gap-4">
               <div className="grid gap-2">
                 <Label>Name</Label>
-                <Input value={medicineForm.name} onChange={(event) => setMedicineForm({ ...medicineForm, name: event.target.value })} placeholder="Medicine name" />
+                <Input value={medicineForm.name} onChange={(e) => setMedicineForm({ ...medicineForm, name: e.target.value })} placeholder="Medicine name" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-2">
-                  <Label>Price</Label>
-                  <Input type="number" value={medicineForm.price} onChange={(event) => setMedicineForm({ ...medicineForm, price: event.target.value })} placeholder="120" />
+                  <Label>Company / Brand</Label>
+                  <Input value={medicineForm.company} onChange={(e) => setMedicineForm({ ...medicineForm, company: e.target.value })} placeholder="e.g. Cipla" />
                 </div>
                 <div className="grid gap-2">
                   <Label>Category</Label>
-                  <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={medicineForm.categoryId} onChange={(event) => setMedicineForm({ ...medicineForm, categoryId: event.target.value })}>
+                  <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={medicineForm.categoryId} onChange={(e) => setMedicineForm({ ...medicineForm, categoryId: e.target.value })}>
                     <option value="">Select</option>
                     {categories?.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
                   </select>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <Label>MRP (₹)</Label>
+                  <Input type="number" value={medicineForm.mrp} onChange={(e) => setMedicineForm({ ...medicineForm, mrp: e.target.value })} placeholder="150" />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Selling Price (₹)</Label>
+                  <Input type="number" value={medicineForm.price} onChange={(e) => setMedicineForm({ ...medicineForm, price: e.target.value })} placeholder="120" />
+                </div>
+              </div>
               <div className="grid gap-2">
-                <Label>Image URL</Label>
-                <Input value={medicineForm.imageUrl} onChange={(event) => setMedicineForm({ ...medicineForm, imageUrl: event.target.value })} placeholder="Paste image URL or leave blank" />
+                <Label>Product Photo</Label>
+                {medicineForm.imageUrl && (
+                  <img src={medicineForm.imageUrl} alt="Preview" className="h-24 w-full rounded-xl object-cover bg-slate-100" />
+                )}
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-3 hover:border-emerald-400 transition-colors">
+                  <Upload size={16} className="shrink-0 text-slate-400" />
+                  <span className="text-sm text-slate-500">{medicineForm.imageUrl ? "Change photo" : "Upload photo"}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => setMedicineForm((prev) => ({ ...prev, imageUrl: String(reader.result) }));
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                </label>
               </div>
               <div className="grid gap-2">
                 <Label>Description</Label>
-                <Input value={medicineForm.description} onChange={(event) => setMedicineForm({ ...medicineForm, description: event.target.value })} placeholder="Short medicine description" />
+                <Input value={medicineForm.description} onChange={(e) => setMedicineForm({ ...medicineForm, description: e.target.value })} placeholder="Short medicine description" />
               </div>
               <div className="flex gap-2">
                 <Button onClick={saveMedicine} disabled={createMedicine.isPending || updateMedicine.isPending} className="flex-1">
@@ -219,7 +257,13 @@ export default function OwnerDashboard() {
                   <img src={medicine.imageUrl} alt={medicine.name} className="h-14 w-14 rounded-xl object-cover" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-bold">{medicine.name}</p>
-                    <p className="text-sm text-slate-500">{medicine.categoryName} · {money(medicine.price)}</p>
+                    <p className="text-sm text-slate-500">{medicine.categoryName}{medicine.company ? ` · ${medicine.company}` : ""}</p>
+                    <p className="text-sm font-semibold text-slate-700">
+                      {money(medicine.price)}
+                      {medicine.mrp && medicine.mrp > medicine.price && (
+                        <span className="ml-2 text-xs font-normal text-slate-400 line-through">{money(medicine.mrp)}</span>
+                      )}
+                    </p>
                   </div>
                   <Button size="icon" variant="outline" onClick={() => editMedicine(medicine)}><Edit3 size={15} /></Button>
                   <Button size="icon" variant="destructive" onClick={() => deleteMedicine.mutate({ id: medicine.id })}><Trash2 size={15} /></Button>

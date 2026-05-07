@@ -65,6 +65,8 @@ export interface Medicine {
   id: string;
   name: string;
   price: number;
+  mrp?: number;
+  company?: string;
   categoryId: string;
   categoryName: string;
   imageUrl: string;
@@ -76,6 +78,8 @@ export interface MedicineInput {
   name: string;
   /** @minimum 1 */
   price: number;
+  mrp?: number;
+  company?: string;
   categoryId: string;
   imageUrl: string;
   description: string;

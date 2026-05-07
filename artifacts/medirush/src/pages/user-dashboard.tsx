@@ -26,8 +26,23 @@ export default function UserDashboard() {
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "upi">("cod");
   const [prescriptionId, setPrescriptionId] = useState<string | undefined>();
 
-  const medicineParams = useMemo(() => ({ search: searchQuery || undefined, categoryId }), [searchQuery, categoryId]);
+  const medicineParams = useMemo(() => ({ search: searchQuery || undefined }), [searchQuery]);
   const { data: medicines, isLoading: loadingMedicines } = useListMedicines(medicineParams);
+
+  const filteredMedicines = useMemo(() => {
+    if (!medicines) return [];
+    return categoryId ? medicines.filter((m) => m.categoryId === categoryId) : medicines;
+  }, [medicines, categoryId]);
+
+  const medicinesByCategory = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof medicines>>();
+    filteredMedicines.forEach((med) => {
+      const arr = map.get(med.categoryId) ?? [];
+      arr.push(med);
+      map.set(med.categoryId, arr);
+    });
+    return map;
+  }, [filteredMedicines]);
   const { data: categories } = useListCategories();
   const { data: cart } = useGetCart();
   const { data: paymentConfig } = useGetPaymentConfig();
@@ -134,46 +149,104 @@ export default function UserDashboard() {
           </section>
 
           {/* Products */}
-          <section>
-            <h2 className="font-bold text-base mb-2.5">{searchQuery ? `Results for "${searchQuery}"` : "All Medicines"}</h2>
+          <section className="space-y-5">
             {loadingMedicines ? (
               <div className="grid grid-cols-2 gap-3">
                 {[1,2,3,4].map(i => <div key={i} className="h-52 bg-white rounded-2xl animate-pulse" />)}
               </div>
-            ) : medicines?.length === 0 ? (
-              <div className="text-center py-12 text-slate-400">No medicines found</div>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {medicines?.map(med => {
-                  const qty = getItemQty(med.id);
-                  return (
-                    <div key={med.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
-                      <div className="relative">
-                        <img src={med.imageUrl} alt={med.name} className="w-full h-28 object-cover" />
-                      </div>
-                      <div className="p-3 space-y-1.5">
-                        <p className="font-bold text-sm leading-tight line-clamp-2">{med.name}</p>
-                        <p className="text-xs text-slate-400">{med.categoryName}</p>
-                        <div className="flex items-center justify-between pt-1">
-                          <span className="font-black text-sm text-slate-900">{money(med.price)}</span>
-                          {qty === 0 ? (
-                            <button
-                              onClick={() => handleAdd(med.id)}
-                              className="bg-white border-2 border-green-600 text-green-600 font-bold text-sm px-3 py-1 rounded-lg hover:bg-green-50 transition"
-                            >Add</button>
-                          ) : (
-                            <div className="flex items-center gap-1 border-2 border-green-600 rounded-lg overflow-hidden">
-                              <button onClick={() => handleDec(med.id, qty)} className="bg-green-600 text-white px-2 py-1 hover:bg-green-700"><Minus size={12} /></button>
-                              <span className="text-green-700 font-bold text-sm px-1.5">{qty}</span>
-                              <button onClick={() => handleInc(med.id, qty)} className="bg-green-600 text-white px-2 py-1 hover:bg-green-700"><Plus size={12} /></button>
+            ) : searchQuery ? (
+              <>
+                <h2 className="font-bold text-base">{`Results for "${searchQuery}"`}</h2>
+                {filteredMedicines.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400">No medicines found</div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {filteredMedicines.map(med => {
+                      const qty = getItemQty(med.id);
+                      const discount = med.mrp && med.mrp > med.price ? Math.round((med.mrp - med.price) / med.mrp * 100) : 0;
+                      return (
+                        <div key={med.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
+                          <div className="relative">
+                            <img src={med.imageUrl} alt={med.name} className="w-full h-28 object-cover" />
+                            {discount > 0 && (
+                              <span className="absolute top-1.5 right-1.5 bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">{discount}% OFF</span>
+                            )}
+                          </div>
+                          <div className="p-3 space-y-1">
+                            <p className="font-bold text-sm leading-tight line-clamp-2">{med.name}</p>
+                            {med.company && <p className="text-[11px] text-slate-400 truncate">{med.company}</p>}
+                            <div className="flex items-end justify-between pt-1 gap-1">
+                              <div>
+                                {discount > 0 && <p className="text-[10px] text-slate-400 line-through leading-none">{money(med.mrp!)}</p>}
+                                <span className="font-black text-sm text-slate-900">{money(med.price)}</span>
+                              </div>
+                              {qty === 0 ? (
+                                <button onClick={() => handleAdd(med.id)} className="shrink-0 border-2 border-green-600 text-green-600 font-bold text-xs px-2.5 py-1 rounded-lg hover:bg-green-50 transition">Add</button>
+                              ) : (
+                                <div className="shrink-0 flex items-center gap-0.5 border-2 border-green-600 rounded-lg overflow-hidden">
+                                  <button onClick={() => handleDec(med.id, qty)} className="bg-green-600 text-white px-1.5 py-1"><Minus size={11} /></button>
+                                  <span className="text-green-700 font-bold text-xs px-1">{qty}</span>
+                                  <button onClick={() => handleInc(med.id, qty)} className="bg-green-600 text-white px-1.5 py-1"><Plus size={11} /></button>
+                                </div>
+                              )}
                             </div>
-                          )}
+                          </div>
                         </div>
-                      </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            ) : (
+              // Category-wise horizontal scroll sections
+              (categoryId ? categories?.filter(c => c.id === categoryId) : categories)?.map(cat => {
+                const catMedicines = medicinesByCategory.get(cat.id) ?? [];
+                if (catMedicines.length === 0) return null;
+                return (
+                  <div key={cat.id}>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <h2 className="font-bold text-base">{cat.name}</h2>
+                      <span className="text-xs text-slate-400">{catMedicines.length} item{catMedicines.length !== 1 ? "s" : ""}</span>
                     </div>
-                  );
-                })}
-              </div>
+                    <div className="flex gap-3 overflow-x-auto pb-2 -mx-3 px-3 scrollbar-hide">
+                      {catMedicines.map(med => {
+                        const qty = getItemQty(med.id);
+                        const discount = med.mrp && med.mrp > med.price ? Math.round((med.mrp - med.price) / med.mrp * 100) : 0;
+                        return (
+                          <div key={med.id} className="shrink-0 w-36 bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
+                            <div className="relative">
+                              <img src={med.imageUrl} alt={med.name} className="w-full h-[100px] object-cover" />
+                              {discount > 0 && (
+                                <span className="absolute top-1.5 right-1.5 bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">{discount}% OFF</span>
+                              )}
+                            </div>
+                            <div className="p-2.5 space-y-1">
+                              <p className="font-bold text-xs leading-tight line-clamp-2">{med.name}</p>
+                              {med.company && <p className="text-[10px] text-slate-400 truncate">{med.company}</p>}
+                              <div>
+                                {discount > 0 && <p className="text-[10px] text-slate-400 line-through leading-none">{money(med.mrp!)}</p>}
+                                <p className="font-black text-sm text-slate-900">{money(med.price)}</p>
+                              </div>
+                              {qty === 0 ? (
+                                <button
+                                  onClick={() => handleAdd(med.id)}
+                                  className="w-full border-2 border-green-600 text-green-600 font-bold text-xs py-1 rounded-lg hover:bg-green-50 transition"
+                                >+ Add</button>
+                              ) : (
+                                <div className="flex items-center justify-between border-2 border-green-600 rounded-lg overflow-hidden">
+                                  <button onClick={() => handleDec(med.id, qty)} className="bg-green-600 text-white px-2 py-1"><Minus size={10} /></button>
+                                  <span className="text-green-700 font-bold text-xs">{qty}</span>
+                                  <button onClick={() => handleInc(med.id, qty)} className="bg-green-600 text-white px-2 py-1"><Plus size={10} /></button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })
             )}
           </section>
         </main>

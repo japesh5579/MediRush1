@@ -36,15 +36,23 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
     >
       {/* Logo circle */}
       <div style={{
-        width: 96, height: 96, borderRadius: "50%",
-        background: "rgba(255,255,255,0.18)",
+        width: 112, height: 112, borderRadius: "50%",
+        background: "rgba(255,255,255,0.22)",
         display: "flex", alignItems: "center", justifyContent: "center",
         marginBottom: 24,
-        boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+        boxShadow: "0 12px 48px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.4)",
       }}>
-        <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
-          <rect x="22" y="6" width="8" height="40" rx="4" fill="white"/>
-          <rect x="6" y="22" width="40" height="8" rx="4" fill="white"/>
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+          {/* Pill capsule shape */}
+          <rect x="4" y="20" width="56" height="24" rx="12" fill="white" opacity="0.95"/>
+          {/* Left half tint */}
+          <path d="M4 32a12 12 0 0 1 12-12h16v24H16A12 12 0 0 1 4 32z" fill="#00C853" opacity="0.22"/>
+          {/* Center divider */}
+          <rect x="31.5" y="20" width="1.5" height="24" fill="#00A846" opacity="0.35"/>
+          {/* Speed lines (left of pill) */}
+          <rect x="0" y="26" width="8" height="2.5" rx="1.25" fill="white" opacity="0.5"/>
+          <rect x="0" y="32" width="5" height="2.5" rx="1.25" fill="white" opacity="0.35"/>
+          <rect x="0" y="38" width="6" height="2.5" rx="1.25" fill="white" opacity="0.4"/>
         </svg>
       </div>
 

@@ -10,6 +10,8 @@ export interface Medicine {
   id: string;
   name: string;
   price: number;
+  mrp?: number;
+  company?: string;
   categoryId: string;
   categoryName: string;
   imageUrl: string;

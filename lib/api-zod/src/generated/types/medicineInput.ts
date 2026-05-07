@@ -11,6 +11,8 @@ export interface MedicineInput {
   name: string;
   /** @minimum 1 */
   price: number;
+  mrp?: number;
+  company?: string;
   categoryId: string;
   imageUrl: string;
   description: string;

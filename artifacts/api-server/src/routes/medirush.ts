@@ -86,6 +86,8 @@ function serializeMedicine(medicine: MedicineRow, categories: CategoryRow[]) {
     id: medicine.id,
     name: medicine.name,
     price: medicine.price,
+    mrp: medicine.mrp ?? undefined,
+    company: medicine.company ?? undefined,
     categoryId: medicine.categoryId,
     categoryName: category?.name ?? "General",
     imageUrl: medicine.imageUrl,
@@ -113,6 +115,8 @@ async function ensureTables() {
       category_id TEXT NOT NULL, image_url TEXT NOT NULL, description TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    ALTER TABLE medirush_medicines ADD COLUMN IF NOT EXISTS mrp DOUBLE PRECISION;
+    ALTER TABLE medirush_medicines ADD COLUMN IF NOT EXISTS company TEXT;
     CREATE TABLE IF NOT EXISTS medirush_cart_items (
       id TEXT PRIMARY KEY, user_id TEXT NOT NULL, medicine_id TEXT NOT NULL,
       quantity INTEGER NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -233,8 +237,8 @@ router.post("/medicines", async (req, res) => {
   const body = CreateMedicineBody.parse(req.body);
   const medicine = { id: id("med"), ...body };
   await pool.query(
-    `INSERT INTO medirush_medicines (id, name, price, category_id, image_url, description) VALUES ($1,$2,$3,$4,$5,$6)`,
-    [medicine.id, medicine.name, medicine.price, medicine.categoryId, medicine.imageUrl, medicine.description]
+    `INSERT INTO medirush_medicines (id, name, price, mrp, company, category_id, image_url, description) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+    [medicine.id, medicine.name, medicine.price, medicine.mrp ?? null, medicine.company ?? null, medicine.categoryId, medicine.imageUrl, medicine.description]
   );
   const categories = await db.select().from(categoriesTable);
   res.status(201).json(serializeMedicine(medicine as any, categories));
@@ -247,18 +251,20 @@ router.put("/medicines/:id", async (req, res) => {
   const sets: string[] = []; const vals: unknown[] = []; let p = 1;
   if (body.name !== undefined) { sets.push(`name=$${p++}`); vals.push(body.name); }
   if ((body as any).price !== undefined) { sets.push(`price=$${p++}`); vals.push((body as any).price); }
+  if ((body as any).mrp !== undefined) { sets.push(`mrp=$${p++}`); vals.push((body as any).mrp); }
+  if ((body as any).company !== undefined) { sets.push(`company=$${p++}`); vals.push((body as any).company); }
   if ((body as any).categoryId !== undefined) { sets.push(`category_id=$${p++}`); vals.push((body as any).categoryId); }
   if ((body as any).imageUrl !== undefined) { sets.push(`image_url=$${p++}`); vals.push((body as any).imageUrl); }
   if ((body as any).description !== undefined) { sets.push(`description=$${p++}`); vals.push((body as any).description); }
   if (sets.length === 0) { res.status(400).json({ message: "Nothing to update" }); return; }
   vals.push(params.id);
-  const medResult = await pool.query<{ id: string; name: string; price: number; category_id: string; image_url: string; description: string; created_at: Date }>(
+  const medResult = await pool.query<{ id: string; name: string; price: number; mrp: number | null; company: string | null; category_id: string; image_url: string; description: string; created_at: Date }>(
     `UPDATE medirush_medicines SET ${sets.join(",")} WHERE id=$${p} RETURNING *`, vals
   );
   if (!medResult.rows[0]) { res.status(404).json({ message: "Medicine not found" }); return; }
   const m = medResult.rows[0];
   const categories = await db.select().from(categoriesTable);
-  res.json(serializeMedicine({ id: m.id, name: m.name, price: m.price, categoryId: m.category_id, imageUrl: m.image_url, description: m.description, createdAt: m.created_at } as any, categories));
+  res.json(serializeMedicine({ id: m.id, name: m.name, price: m.price, mrp: m.mrp, company: m.company, categoryId: m.category_id, imageUrl: m.image_url, description: m.description, createdAt: m.created_at } as MedicineRow, categories));
 });
 
 router.delete("/medicines/:id", async (req, res) => {

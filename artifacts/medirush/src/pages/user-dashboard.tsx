@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Activity, Bell, BellOff, Bookmark, Check, ChevronDown, ChevronRight, ChevronUp, Clock, Edit2, FileImage, Home, Lock, LogOut, MapPin, Minus, Package, Plus, Printer, RefreshCw, Search, ShoppingCart, Star, Trash2, X, XCircle } from "lucide-react";
+import { Activity, Bell, BellOff, Bookmark, Check, ChevronDown, ChevronRight, ChevronUp, Clock, Edit2, FileImage, FlaskConical, Home, Lock, LogOut, MapPin, Minus, Package, Plus, Printer, RefreshCw, Search, ShoppingCart, Star, Trash2, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,9 @@ import type { Medicine, Order } from "@workspace/api-client-react";
 
 const money = (value: number) => `₹${value.toFixed(0)}`;
 
-type Tab = "home" | "orders" | "account";
+type Tab = "home" | "tests" | "orders" | "account";
+type LabTest = { id: string; name: string; price: number; description?: string; preparation?: string; turnaroundTime: string };
+type TestBooking = { id: string; tests: LabTest[]; total: number; date: string; timeSlot: string; collectionType: string; address: string; status: string; createdAt: string };
 type SavedAddress = { id: string; label: string; address: string; createdAt: string };
 
 const FAQ_ITEMS = [
@@ -118,6 +120,12 @@ export default function UserDashboard() {
   const [newPwd, setNewPwd] = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
   const [visibleSearchCount, setVisibleSearchCount] = useState(20);
+  const [selectedTests, setSelectedTests] = useState<LabTest[]>([]);
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [testDate, setTestDate] = useState("");
+  const [testSlot, setTestSlot] = useState("Morning (7-10 AM)");
+  const [testCollection, setTestCollection] = useState<"home" | "walkin">("home");
+  const [testAddress, setTestAddress] = useState(user?.location ?? "");
 
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("mrh_search_history") ?? "[]"); } catch { return []; }
@@ -135,6 +143,24 @@ export default function UserDashboard() {
   const { data: storeConfig } = useQuery<{ hideOutOfStock: boolean }>({
     queryKey: ["store-config"],
     queryFn: () => fetch("/api/config/store").then(r => r.json()),
+  });
+  const { data: labTests = [] } = useQuery<LabTest[]>({
+    queryKey: ["lab-tests"],
+    queryFn: () => authFetch("/api/tests"),
+  });
+  const { data: testBookings = [], refetch: refetchTestBookings } = useQuery<TestBooking[]>({
+    queryKey: ["test-bookings"],
+    queryFn: () => authFetch("/api/test-bookings"),
+  });
+  const bookTest = useMutation({
+    mutationFn: (data: object) => authFetch("/api/test-bookings", { method: "POST", body: JSON.stringify(data) }),
+    onSuccess: () => {
+      refetchTestBookings();
+      setShowBookingForm(false);
+      setSelectedTests([]);
+      toast({ title: "Test booked!", description: "We'll confirm your slot shortly." });
+    },
+    onError: (e: any) => toast({ title: "Booking failed", description: e.message, variant: "destructive" }),
   });
 
   const filteredMedicines = useMemo(() => {
@@ -849,6 +875,126 @@ export default function UserDashboard() {
         </main>
       )}
 
+      {/* Tests Tab */}
+      {activeTab === "tests" && (
+        <main className="pt-16 pb-24 px-3 space-y-4 max-w-md mx-auto">
+          <h2 className="text-lg font-bold text-slate-800 pt-2">Book Lab Tests</h2>
+
+          {/* Test catalogue */}
+          {labTests.length === 0 ? (
+            <div className="text-center py-16 text-slate-400">
+              <FlaskConical size={40} className="mx-auto mb-3 text-slate-200" />
+              <p className="font-semibold">No tests available yet</p>
+              <p className="text-sm mt-1">Check back soon</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {labTests.map(test => {
+                const selected = selectedTests.some(t => t.id === test.id);
+                return (
+                  <div key={test.id} className={`bg-white rounded-2xl p-4 border-2 transition ${selected ? "border-green-500 bg-green-50" : "border-slate-100"}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-slate-800">{test.name}</p>
+                        {test.description && <p className="text-xs text-slate-500 mt-0.5">{test.description}</p>}
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <span className="text-green-700 font-bold text-sm">{money(test.price)}</span>
+                          <span className="text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Report in {test.turnaroundTime}</span>
+                        </div>
+                        {test.preparation && <p className="text-[11px] text-amber-600 mt-1">⚠ {test.preparation}</p>}
+                      </div>
+                      <button
+                        onClick={() => setSelectedTests(s => selected ? s.filter(t => t.id !== test.id) : [...s, test])}
+                        className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg transition ${selected ? "bg-green-600 text-white" : "bg-slate-100 text-slate-500"}`}
+                      >{selected ? "✓" : "+"}</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Past bookings */}
+          {testBookings.length > 0 && (
+            <div className="mt-4">
+              <h3 className="font-bold text-sm text-slate-600 mb-2 uppercase tracking-wide">Your Bookings</h3>
+              <div className="space-y-2">
+                {testBookings.map(b => (
+                  <div key={b.id} className="bg-white rounded-2xl p-4 border border-slate-100">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-bold text-sm">{b.tests.map((t: any) => t.name).join(", ")}</p>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${b.status === "Report Ready" ? "bg-green-100 text-green-700" : b.status === "Cancelled" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"}`}>{b.status}</span>
+                    </div>
+                    <p className="text-xs text-slate-500">{b.date} · {b.timeSlot} · {b.collectionType === "home" ? "Home Collection" : "Walk-in"}</p>
+                    <p className="text-xs font-semibold text-green-700 mt-1">{money(b.total)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Selected tests bar + booking form */}
+          {selectedTests.length > 0 && !showBookingForm && (
+            <div className="fixed bottom-16 left-0 right-0 z-20 px-3 max-w-md mx-auto" style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom))' }}>
+              <button onClick={() => setShowBookingForm(true)} className="w-full bg-green-600 text-white rounded-2xl px-4 py-3.5 flex items-center justify-between shadow-2xl">
+                <span className="font-bold">{selectedTests.length} test{selectedTests.length > 1 ? "s" : ""} selected</span>
+                <span className="font-black">{money(selectedTests.reduce((s, t) => s + t.price, 0))} · Book Now</span>
+              </button>
+            </div>
+          )}
+
+          {/* Booking form overlay */}
+          {showBookingForm && (
+            <div className="fixed inset-0 z-50 bg-black/50 flex items-end" onClick={() => setShowBookingForm(false)}>
+              <div className="bg-white w-full max-w-md mx-auto rounded-t-3xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-lg">Book Tests</h3>
+                  <button onClick={() => setShowBookingForm(false)} className="text-slate-400"><X size={22} /></button>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3 space-y-1">
+                  {selectedTests.map(t => <div key={t.id} className="flex justify-between text-sm"><span>{t.name}</span><span className="font-semibold">{money(t.price)}</span></div>)}
+                  <div className="flex justify-between font-bold text-green-700 border-t border-slate-200 pt-1 mt-1"><span>Total</span><span>{money(selectedTests.reduce((s, t) => s + t.price, 0))}</span></div>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase">Date</label>
+                    <input type="date" value={testDate} onChange={e => setTestDate(e.target.value)} min={new Date().toISOString().split("T")[0]} className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase">Time Slot</label>
+                    <div className="grid grid-cols-3 gap-2 mt-1">
+                      {["Morning (7-10 AM)", "Afternoon (12-3 PM)", "Evening (5-8 PM)"].map(s => (
+                        <button key={s} type="button" onClick={() => setTestSlot(s)} className={`py-2 rounded-xl text-[11px] font-bold border-2 transition ${testSlot === s ? "border-green-600 bg-green-50 text-green-700" : "border-slate-200 text-slate-500"}`}>{s.split(" ")[0]}<br /><span className="font-normal">{s.split(" ").slice(1).join(" ")}</span></button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase">Collection Type</label>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      <button type="button" onClick={() => setTestCollection("home")} className={`py-2.5 rounded-xl text-sm font-bold border-2 transition ${testCollection === "home" ? "border-green-600 bg-green-50 text-green-700" : "border-slate-200 text-slate-500"}`}>🏠 Home</button>
+                      <button type="button" onClick={() => setTestCollection("walkin")} className={`py-2.5 rounded-xl text-sm font-bold border-2 transition ${testCollection === "walkin" ? "border-green-600 bg-green-50 text-green-700" : "border-slate-200 text-slate-500"}`}>🏥 Walk-in</button>
+                    </div>
+                  </div>
+                  {testCollection === "home" && (
+                    <div>
+                      <label className="text-xs font-semibold text-slate-500 uppercase">Collection Address</label>
+                      <textarea value={testAddress} onChange={e => setTestAddress(e.target.value)} className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none" rows={2} placeholder="Full address for sample collection" />
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => bookTest.mutate({ tests: selectedTests, total: selectedTests.reduce((s, t) => s + t.price, 0), date: testDate, timeSlot: testSlot, collectionType: testCollection, address: testCollection === "home" ? testAddress : "Walk-in" })}
+                  disabled={!testDate || bookTest.isPending}
+                  className="w-full bg-green-600 text-white font-bold py-4 rounded-2xl disabled:opacity-50"
+                >
+                  {bookTest.isPending ? "Booking..." : "Confirm Booking"}
+                </button>
+              </div>
+            </div>
+          )}
+        </main>
+      )}
+
       {/* Sticky cart bar */}
       {cartCount > 0 && !showCart && (
         <div className="fixed bottom-16 left-0 right-0 z-20 px-3 max-w-md mx-auto" style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom))' }}>
@@ -862,9 +1008,10 @@ export default function UserDashboard() {
 
       {/* Bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 max-w-md mx-auto" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="grid grid-cols-3 py-1">
+        <div className="grid grid-cols-4 py-1">
           {([
             { tab: "home" as Tab, icon: Home, label: "Home" },
+            { tab: "tests" as Tab, icon: FlaskConical, label: "Tests" },
             { tab: "orders" as Tab, icon: Package, label: "Orders" },
             { tab: "account" as Tab, icon: Activity, label: "Account" },
           ] as const).map(({ tab, icon: Icon, label }) => (

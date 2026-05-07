@@ -143,6 +143,18 @@ async function ensureTables() {
       key TEXT PRIMARY KEY, value TEXT NOT NULL
     );
     INSERT INTO medirush_settings (key, value) VALUES ('hide_oos', 'false') ON CONFLICT (key) DO NOTHING;
+    CREATE TABLE IF NOT EXISTS medirush_tests (
+      id TEXT PRIMARY KEY, name TEXT NOT NULL, price DOUBLE PRECISION NOT NULL,
+      description TEXT, preparation TEXT, turnaround_time TEXT NOT NULL DEFAULT '24 hrs',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS medirush_test_bookings (
+      id TEXT PRIMARY KEY, user_id TEXT NOT NULL, user_name TEXT NOT NULL,
+      user_phone TEXT NOT NULL, tests JSONB NOT NULL, total DOUBLE PRECISION NOT NULL,
+      date TEXT NOT NULL, time_slot TEXT NOT NULL, collection_type TEXT NOT NULL,
+      address TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Pending',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `);
 }
 
@@ -571,6 +583,70 @@ router.patch("/config/store", async (req, res) => {
     [String(!!hideOutOfStock)]
   );
   res.json({ hideOutOfStock: !!hideOutOfStock });
+});
+
+// ── Tests ────────────────────────────────────────────────
+router.get("/tests", async (_req, res) => {
+  const { rows } = await pool.query(`SELECT * FROM medirush_tests ORDER BY created_at ASC`);
+  res.json(rows.map((r: any) => ({ id: r.id, name: r.name, price: r.price, description: r.description, preparation: r.preparation, turnaroundTime: r.turnaround_time, createdAt: r.created_at })));
+});
+
+router.post("/tests", async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  const { name, price, description, preparation, turnaroundTime } = req.body as any;
+  if (!name || !price) { res.status(400).json({ message: "name and price required" }); return; }
+  const testId = id("tst");
+  await pool.query(`INSERT INTO medirush_tests (id,name,price,description,preparation,turnaround_time) VALUES ($1,$2,$3,$4,$5,$6)`, [testId, name, Number(price), description || null, preparation || null, turnaroundTime || "24 hrs"]);
+  const { rows } = await pool.query(`SELECT * FROM medirush_tests WHERE id=$1`, [testId]);
+  const r = rows[0] as any;
+  res.status(201).json({ id: r.id, name: r.name, price: r.price, description: r.description, preparation: r.preparation, turnaroundTime: r.turnaround_time, createdAt: r.created_at });
+});
+
+router.put("/tests/:id", async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  const { name, price, description, preparation, turnaroundTime } = req.body as any;
+  await pool.query(`UPDATE medirush_tests SET name=$1,price=$2,description=$3,preparation=$4,turnaround_time=$5 WHERE id=$6`, [name, Number(price), description || null, preparation || null, turnaroundTime || "24 hrs", req.params.id]);
+  res.json({ message: "Updated" });
+});
+
+router.delete("/tests/:id", async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  await pool.query(`DELETE FROM medirush_tests WHERE id=$1`, [req.params.id]);
+  res.status(204).send();
+});
+
+// ── Test Bookings ─────────────────────────────────────────
+router.get("/test-bookings", async (req, res) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const { rows } = await pool.query(`SELECT * FROM medirush_test_bookings WHERE user_id=$1 ORDER BY created_at DESC`, [userId]);
+  res.json(rows.map((r: any) => ({ id: r.id, tests: r.tests, total: r.total, date: r.date, timeSlot: r.time_slot, collectionType: r.collection_type, address: r.address, status: r.status, createdAt: r.created_at })));
+});
+
+router.post("/test-bookings", async (req, res) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const { tests, total, date, timeSlot, collectionType, address } = req.body as any;
+  if (!tests?.length || !date || !timeSlot || !collectionType || !address) { res.status(400).json({ message: "Missing required fields" }); return; }
+  const userRows = await pool.query<{ full_name: string; phone: string }>(`SELECT full_name, phone FROM medirush_users WHERE id=$1`, [userId]);
+  const u = userRows.rows[0];
+  const bookingId = id("tbk");
+  await pool.query(`INSERT INTO medirush_test_bookings (id,user_id,user_name,user_phone,tests,total,date,time_slot,collection_type,address) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+    [bookingId, userId, u?.full_name ?? "", u?.phone ?? "", JSON.stringify(tests), total, date, timeSlot, collectionType, address]);
+  res.status(201).json({ id: bookingId, message: "Booking confirmed" });
+});
+
+router.get("/test-bookings/all", async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  const { rows } = await pool.query(`SELECT * FROM medirush_test_bookings ORDER BY created_at DESC`);
+  res.json(rows.map((r: any) => ({ id: r.id, userId: r.user_id, userName: r.user_name, userPhone: r.user_phone, tests: r.tests, total: r.total, date: r.date, timeSlot: r.time_slot, collectionType: r.collection_type, address: r.address, status: r.status, createdAt: r.created_at })));
+});
+
+router.patch("/test-bookings/:id", async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  const { status } = req.body as { status: string };
+  await pool.query(`UPDATE medirush_test_bookings SET status=$1 WHERE id=$2`, [status, req.params.id]);
+  res.json({ message: "Updated" });
 });
 
 router.get("/config/payment", (_req, res) => {

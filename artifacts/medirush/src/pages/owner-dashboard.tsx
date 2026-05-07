@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Activity, AlertTriangle, BarChart2, DollarSign, Edit3, FileText, ListOrdered, LogOut, Package, Plus, Tags, Trash2, TrendingUp, Upload } from "lucide-react";
+import { Activity, AlertTriangle, BarChart2, DollarSign, Edit3, FileText, FlaskConical, ListOrdered, LogOut, Package, Plus, Tags, Trash2, TrendingUp, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -39,9 +39,11 @@ export default function OwnerDashboard() {
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
   const [hideOOS, setHideOOS] = useState(false);
-  const [activeSection, setActiveSection] = useState<"overview" | "catalogue" | "orders" | "reports">("overview");
+  const [activeSection, setActiveSection] = useState<"overview" | "catalogue" | "orders" | "reports" | "tests">("overview");
   const [editingStock, setEditingStock] = useState(false);
   const [stockEdits, setStockEdits] = useState<Record<string, string>>({});
+  const [testForm, setTestForm] = useState({ name: "", price: "", description: "", preparation: "", turnaroundTime: "24 hrs" });
+  const [editingTestId, setEditingTestId] = useState<string | null>(null);
 
   const { data: summary, isLoading } = useGetDashboardSummary();
   const { data: medicines } = useListMedicines();
@@ -56,6 +58,34 @@ export default function OwnerDashboard() {
   useEffect(() => {
     if (storeConfig !== undefined) setHideOOS(storeConfig.hideOutOfStock);
   }, [storeConfig]);
+
+  type LabTest = { id: string; name: string; price: number; description?: string; preparation?: string; turnaroundTime: string };
+  type TestBooking = { id: string; userName: string; userPhone: string; tests: LabTest[]; total: number; date: string; timeSlot: string; collectionType: string; address: string; status: string; createdAt: string };
+
+  const { data: labTests = [], refetch: refetchTests } = useQuery<LabTest[]>({
+    queryKey: ["lab-tests"],
+    queryFn: () => authFetch("/api/tests"),
+  });
+  const { data: testBookings = [], refetch: refetchTestBookings } = useQuery<TestBooking[]>({
+    queryKey: ["test-bookings-all"],
+    queryFn: () => authFetch("/api/test-bookings/all"),
+    refetchInterval: 15000,
+  });
+  const saveTest = useMutation({
+    mutationFn: (data: object) => editingTestId
+      ? authFetch(`/api/tests/${editingTestId}`, { method: "PUT", body: JSON.stringify(data) })
+      : authFetch("/api/tests", { method: "POST", body: JSON.stringify(data) }),
+    onSuccess: () => { refetchTests(); setTestForm({ name: "", price: "", description: "", preparation: "", turnaroundTime: "24 hrs" }); setEditingTestId(null); toast({ title: editingTestId ? "Test updated" : "Test added" }); },
+    onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+  const deleteTest = useMutation({
+    mutationFn: (testId: string) => authFetch(`/api/tests/${testId}`, { method: "DELETE" }),
+    onSuccess: () => { refetchTests(); toast({ title: "Test deleted" }); },
+  });
+  const updateBookingStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => authFetch(`/api/test-bookings/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
+    onSuccess: () => refetchTestBookings(),
+  });
 
   const updateStoreConfig = useMutation({
     mutationFn: (value: boolean) => authFetch("/api/config/store", { method: "PATCH", body: JSON.stringify({ hideOutOfStock: value }) }),
@@ -239,6 +269,7 @@ export default function OwnerDashboard() {
     { id: "overview", label: "Overview", icon: BarChart2 },
     { id: "catalogue", label: "Catalogue", icon: Package },
     { id: "orders", label: "Orders", icon: ListOrdered },
+    { id: "tests", label: "Tests", icon: FlaskConical },
     { id: "reports", label: "Reports", icon: FileText },
   ] as const;
 
@@ -648,6 +679,81 @@ export default function OwnerDashboard() {
                     </tbody>
                   </table>
                 </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {/* ── Tests Section ── */}
+        {activeSection === "tests" && (
+          <>
+            {/* Add / Edit Test */}
+            <Card className="bg-slate-900 border-white/10">
+              <CardHeader><CardTitle className="text-white text-base">{editingTestId ? "Edit Test" : "Add New Test"}</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label className="text-slate-400 text-xs">Test Name *</Label><Input className="mt-1 bg-slate-800 border-white/10 text-white" value={testForm.name} onChange={e => setTestForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. CBC Blood Test" /></div>
+                  <div><Label className="text-slate-400 text-xs">Price (₹) *</Label><Input className="mt-1 bg-slate-800 border-white/10 text-white" type="number" value={testForm.price} onChange={e => setTestForm(f => ({ ...f, price: e.target.value }))} placeholder="350" /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label className="text-slate-400 text-xs">Report Turnaround</Label><Input className="mt-1 bg-slate-800 border-white/10 text-white" value={testForm.turnaroundTime} onChange={e => setTestForm(f => ({ ...f, turnaroundTime: e.target.value }))} placeholder="24 hrs" /></div>
+                  <div><Label className="text-slate-400 text-xs">Preparation</Label><Input className="mt-1 bg-slate-800 border-white/10 text-white" value={testForm.preparation} onChange={e => setTestForm(f => ({ ...f, preparation: e.target.value }))} placeholder="Fasting 8 hrs" /></div>
+                </div>
+                <div><Label className="text-slate-400 text-xs">Description</Label><Input className="mt-1 bg-slate-800 border-white/10 text-white" value={testForm.description} onChange={e => setTestForm(f => ({ ...f, description: e.target.value }))} placeholder="Short description" /></div>
+                <div className="flex gap-2">
+                  <Button onClick={() => saveTest.mutate(testForm)} disabled={!testForm.name || !testForm.price || saveTest.isPending} className="bg-emerald-500 text-slate-950 hover:bg-emerald-400">{saveTest.isPending ? "Saving..." : editingTestId ? "Update Test" : "Add Test"}</Button>
+                  {editingTestId && <Button variant="outline" onClick={() => { setEditingTestId(null); setTestForm({ name: "", price: "", description: "", preparation: "", turnaroundTime: "24 hrs" }); }}>Cancel</Button>}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tests list */}
+            <Card className="bg-slate-900 border-white/10">
+              <CardHeader><CardTitle className="text-white text-base">Test Catalogue ({labTests.length})</CardTitle></CardHeader>
+              <CardContent>
+                {labTests.length === 0 ? <p className="text-slate-400 text-sm py-4 text-center">No tests added yet</p> : (
+                  <div className="space-y-2">
+                    {labTests.map(t => (
+                      <div key={t.id} className="flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3">
+                        <div>
+                          <p className="font-semibold text-white text-sm">{t.name}</p>
+                          <p className="text-xs text-slate-400">{money(t.price)} · {t.turnaroundTime}{t.preparation ? ` · ${t.preparation}` : ""}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" className="border-white/10 text-slate-300 h-8 px-2" onClick={() => { setEditingTestId(t.id); setTestForm({ name: t.name, price: String(t.price), description: t.description ?? "", preparation: t.preparation ?? "", turnaroundTime: t.turnaroundTime }); }}><Edit3 size={13} /></Button>
+                          <Button size="sm" variant="destructive" className="h-8 px-2" onClick={() => deleteTest.mutate(t.id)}><Trash2 size={13} /></Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Test Bookings */}
+            <Card className="bg-slate-900 border-white/10">
+              <CardHeader><CardTitle className="text-white text-base">Test Bookings ({testBookings.length})</CardTitle></CardHeader>
+              <CardContent>
+                {testBookings.length === 0 ? <p className="text-slate-400 text-sm py-4 text-center">No bookings yet</p> : (
+                  <div className="space-y-3">
+                    {testBookings.map(b => (
+                      <div key={b.id} className="bg-slate-800 rounded-xl p-4">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div>
+                            <p className="font-semibold text-white text-sm">{b.userName} · {b.userPhone}</p>
+                            <p className="text-xs text-slate-400">{b.tests.map((t: any) => t.name).join(", ")}</p>
+                            <p className="text-xs text-slate-400 mt-0.5">{b.date} · {b.timeSlot} · {b.collectionType === "home" ? "🏠 " + b.address : "🏥 Walk-in"}</p>
+                            <p className="text-xs text-emerald-400 font-bold mt-1">{money(b.total)}</p>
+                          </div>
+                          <span className={`text-xs font-bold px-2 py-1 rounded-full shrink-0 ${b.status === "Report Ready" ? "bg-emerald-500/20 text-emerald-400" : b.status === "Cancelled" ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400"}`}>{b.status}</span>
+                        </div>
+                        <select value={b.status} onChange={e => updateBookingStatus.mutate({ id: b.id, status: e.target.value })} className="w-full bg-slate-700 border border-white/10 text-white text-xs rounded-lg px-3 py-1.5">
+                          {["Pending", "Confirmed", "Sample Collected", "Report Ready", "Cancelled"].map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </>

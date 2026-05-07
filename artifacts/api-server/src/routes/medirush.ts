@@ -189,7 +189,46 @@ async function ensureSeedData() {
   ]);
 }
 
-const ready = ensureTables().then(() => ensureSeedData()).catch((err) => {
+async function ensureOtcProducts() {
+  const cats: Record<string, string> = {
+    "Hydration":       "cat_hydration",
+    "Calcium Supplement": "cat_calcium",
+    "Vitamins":        "cat_vitamins",
+    "Digestive Care":  "cat_digestive",
+    "Pain Relief":     "cat_pain_relief",
+    "Fever & Pain":    "cat_cold_care",
+    "Multivitamins":   "cat_multivitamins",
+    "Acidity Relief":  "cat_acidity",
+    "First Aid":       "cat_first_aid",
+    "Personal Hygiene":"cat_personal_hygiene",
+  };
+  for (const [name, catId] of Object.entries(cats)) {
+    await pool.query(`INSERT INTO medirush_categories (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`, [catId, name]);
+  }
+
+  const otc = [
+    { id: "med_electral_ors",    name: "Electral ORS",              company: "FDC Limited",                    catId: "cat_hydration",        mrp: 22,  price: 19.80, desc: "Oral rehydration salts for quick hydration and electrolyte replenishment." },
+    { id: "med_shelcal_500",     name: "Shelcal 500",               company: "Torrent Pharmaceuticals",        catId: "cat_calcium",          mrp: 135, price: 121.50, desc: "Calcium carbonate 500mg supplement for bone health and calcium deficiency." },
+    { id: "med_limcee_500",      name: "Limcee 500",                company: "Abbott India",                   catId: "cat_vitamins",         mrp: 32,  price: 28.80, desc: "Vitamin C 500mg chewable tablets for immunity and antioxidant support." },
+    { id: "med_digene_gel",      name: "Digene Gel",                company: "Abbott India",                   catId: "cat_digestive",        mrp: 138, price: 124.20, desc: "Antacid gel for fast relief from acidity, gas, and indigestion." },
+    { id: "med_volini_spray",    name: "Volini Spray",              company: "Sun Pharmaceutical Industries",  catId: "cat_pain_relief",      mrp: 240, price: 216.00, desc: "Topical pain relief spray for muscle pain, sprains, and joint stiffness." },
+    { id: "med_crocin_advance",  name: "Crocin Advance",            company: "Haleon India",                   catId: "cat_cold_care",        mrp: 20,  price: 18.00, desc: "Paracetamol 500mg tablet for fast relief from fever and mild to moderate pain." },
+    { id: "med_revital_h",       name: "Revital H",                 company: "Sun Pharmaceutical Industries",  catId: "cat_multivitamins",    mrp: 120, price: 108.00, desc: "Daily multivitamin with ginseng for energy, stamina, and overall vitality." },
+    { id: "med_eno_regular",     name: "ENO",                       company: "Haleon India",                   catId: "cat_acidity",          mrp: 10,  price: 9.00,  desc: "Fast-acting antacid powder for instant relief from acidity and heartburn." },
+    { id: "med_dettol_liquid",   name: "Dettol Antiseptic Liquid",  company: "Reckitt",                        catId: "cat_first_aid",        mrp: 75,  price: 67.50, desc: "Multipurpose antiseptic liquid for cuts, wounds, and surface disinfection." },
+    { id: "med_whisper_ultra",   name: "Whisper Ultra",             company: "Procter & Gamble",               catId: "cat_personal_hygiene", mrp: 50,  price: 45.00, desc: "Ultra-thin sanitary pads with soft cover for maximum comfort and protection." },
+  ];
+
+  for (const m of otc) {
+    await pool.query(
+      `INSERT INTO medirush_medicines (id, name, price, mrp, company, category_id, image_url, description)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (id) DO NOTHING`,
+      [m.id, m.name, m.price, m.mrp, m.company, m.catId, svgDataUrl(m.name.split(" ")[0], "%2300C853"), m.desc]
+    );
+  }
+}
+
+const ready = ensureTables().then(() => ensureSeedData()).then(() => ensureOtcProducts()).catch((err) => {
   console.warn("DB init skipped:", err?.message ?? err);
 });
 

@@ -139,6 +139,10 @@ async function ensureTables() {
       id TEXT PRIMARY KEY, user_id TEXT NOT NULL, label TEXT NOT NULL,
       address TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS medirush_settings (
+      key TEXT PRIMARY KEY, value TEXT NOT NULL
+    );
+    INSERT INTO medirush_settings (key, value) VALUES ('hide_oos', 'false') ON CONFLICT (key) DO NOTHING;
   `);
 }
 
@@ -508,6 +512,21 @@ router.get("/debug/status", async (_req, res) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+});
+
+router.get("/config/store", async (_req, res) => {
+  const { rows } = await pool.query<{ value: string }>(`SELECT value FROM medirush_settings WHERE key='hide_oos'`);
+  res.json({ hideOutOfStock: rows[0]?.value === "true" });
+});
+
+router.patch("/config/store", async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  const { hideOutOfStock } = req.body as { hideOutOfStock: boolean };
+  await pool.query(
+    `INSERT INTO medirush_settings (key, value) VALUES ('hide_oos', $1) ON CONFLICT (key) DO UPDATE SET value = $1`,
+    [String(!!hideOutOfStock)]
+  );
+  res.json({ hideOutOfStock: !!hideOutOfStock });
 });
 
 router.get("/config/payment", (_req, res) => {

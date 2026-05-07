@@ -98,8 +98,12 @@ export default function UserDashboard() {
   const { data: medicines, isLoading: loadingMedicines } = useListMedicines(medicineParams);
   const filteredMedicines = useMemo(() => {
     if (!medicines) return [];
-    return categoryId ? medicines.filter((m) => m.categoryId === categoryId) : medicines;
-  }, [medicines, categoryId]);
+    let list = medicines;
+    if (storeConfig?.hideOutOfStock) {
+      list = list.filter(m => m.stock === undefined || m.stock === null || m.stock > 0);
+    }
+    return categoryId ? list.filter((m) => m.categoryId === categoryId) : list;
+  }, [medicines, categoryId, storeConfig]);
   const medicinesByCategory = useMemo(() => {
     const map = new Map<string, NonNullable<typeof medicines>>();
     filteredMedicines.forEach((med) => {
@@ -114,6 +118,10 @@ export default function UserDashboard() {
   const { data: cart } = useGetCart();
   const { data: paymentConfig } = useGetPaymentConfig();
   const { data: orders } = useListOrders();
+  const { data: storeConfig } = useQuery<{ hideOutOfStock: boolean }>({
+    queryKey: ["store-config"],
+    queryFn: () => fetch("/api/medirush/config/store").then(r => r.json()),
+  });
 
   const { data: savedAddresses = [], refetch: refetchAddresses } = useQuery<SavedAddress[]>({
     queryKey: ["saved-addresses"],

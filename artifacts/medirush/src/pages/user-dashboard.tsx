@@ -393,7 +393,7 @@ export default function UserDashboard() {
     if (!orders?.length || !medicines) return [];
     const seen = new Set<string>();
     const items: Medicine[] = [];
-    [...orders].reverse().forEach(order => {
+    orders.forEach(order => {
       (order.items as any[]).forEach(item => {
         if (!seen.has(item.medicine.id)) {
           seen.add(item.medicine.id);
@@ -420,7 +420,7 @@ export default function UserDashboard() {
       return (
         <div className="shrink-0 w-36 bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
           <div className="relative cursor-pointer" onClick={() => handleViewProduct(med)}>
-            <img src={med.imageUrl} alt={med.name} className="w-full h-[100px] object-cover" />
+            <img src={med.imageUrl} alt={med.name} className="w-full h-[100px] object-contain bg-white p-1" />
             {lowStock && <span className="absolute top-1.5 left-1.5 bg-orange-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">Only {med.stock} left</span>}
             {oos && <span className="absolute top-1.5 left-1.5 bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">Out of stock</span>}
           </div>
@@ -451,7 +451,7 @@ export default function UserDashboard() {
     return (
       <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
         <div className="relative cursor-pointer" onClick={() => handleViewProduct(med)}>
-          <img src={med.imageUrl} alt={med.name} className="w-full h-28 object-cover" />
+          <img src={med.imageUrl} alt={med.name} className="w-full h-28 object-contain bg-white p-1" />
           {lowStock && <span className="absolute top-1.5 left-1.5 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">Only {med.stock} left</span>}
           {oos && <span className="absolute top-1.5 left-1.5 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">Out of stock</span>}
         </div>
@@ -667,7 +667,7 @@ export default function UserDashboard() {
               <p className="text-slate-400 text-sm mt-1">Your past orders will appear here</p>
               <button onClick={() => setActiveTab("home")} className="mt-4 bg-green-600 text-white font-bold px-6 py-2.5 rounded-2xl text-sm">Browse Medicines</button>
             </div>
-          ) : [...orders].reverse().map(order => {
+          ) : orders.map(order => {
             const stepIndex = order.status === "Cancelled" ? -1 : STATUS_STEPS.indexOf(order.status);
             return (
               <div key={order.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -1188,7 +1188,7 @@ export default function UserDashboard() {
         <div className="fixed inset-0 z-50 flex items-end bg-black/40" onClick={e => { if (e.target === e.currentTarget) setViewingMedicine(null); }}>
           <div className="bg-white rounded-t-3xl w-full max-w-md mx-auto max-h-[85vh] overflow-y-auto shadow-2xl">
             <div className="relative">
-              <img src={viewingMedicine.imageUrl} alt={viewingMedicine.name} className="w-full h-52 object-cover rounded-t-3xl" />
+              <img src={viewingMedicine.imageUrl} alt={viewingMedicine.name} className="w-full h-52 object-contain bg-white rounded-t-3xl p-2" />
               <button onClick={() => setViewingMedicine(null)} className="absolute top-3 right-3 bg-white/90 p-1.5 rounded-full shadow"><X size={18} /></button>
               {viewingMedicine.stock !== undefined && viewingMedicine.stock <= 10 && (
                 <span className={`absolute top-3 left-3 text-white text-xs font-bold px-2.5 py-1 rounded-full ${viewingMedicine.stock === 0 ? "bg-red-500" : "bg-orange-500"}`}>

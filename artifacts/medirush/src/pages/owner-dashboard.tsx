@@ -579,7 +579,7 @@ export default function OwnerDashboard() {
           <Card className="border-white/10 bg-white text-slate-950">
             <CardHeader><CardTitle>All orders</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              {orders?.length ? orders.slice().reverse().map(order => {
+              {orders?.length ? orders.map(order => {
                 const statusColor = order.status === "Delivered" ? "bg-green-100 text-green-700" : order.status === "Out for Delivery" ? "bg-blue-100 text-blue-700" : order.status === "Cancelled" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700";
                 return (
                   <div key={order.id} className="rounded-2xl bg-slate-50 p-3 space-y-2">

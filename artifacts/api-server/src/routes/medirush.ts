@@ -432,6 +432,13 @@ router.post("/orders", async (req, res) => {
     [order.id, order.userId, JSON.stringify(order.items), order.total, order.paymentMethod, order.status, order.etaMinutes, order.prescriptionId, order.deliveryAddress, order.deliveryInstructions]
   );
   await pool.query(`DELETE FROM medirush_cart_items WHERE user_id=$1`, [userId]);
+  // Decrement stock for each ordered item
+  for (const item of cart.items) {
+    await pool.query(
+      `UPDATE medirush_medicines SET stock = GREATEST(0, stock - $1) WHERE id = $2 AND stock IS NOT NULL`,
+      [item.quantity, item.medicine.id]
+    );
+  }
   const row = orderRes.rows[0];
   res.status(201).json({ id: row.id, userId: row.user_id, items: row.items, total: row.total, paymentMethod: row.payment_method as "cod" | "upi", status: row.status, etaMinutes: row.eta_minutes, prescriptionId: row.prescription_id ?? undefined, deliveryAddress: row.delivery_address, deliveryInstructions: row.delivery_instructions ?? undefined, rating: row.rating ?? undefined, createdAt: new Date(row.created_at).toISOString() });
 });

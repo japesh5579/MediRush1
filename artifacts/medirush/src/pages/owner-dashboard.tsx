@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Activity, BarChart2, DollarSign, Edit3, FileText, ListOrdered, LogOut, Package, Plus, Tags, Trash2, TrendingUp, Upload } from "lucide-react";
+import { Activity, AlertTriangle, BarChart2, DollarSign, Edit3, FileText, ListOrdered, LogOut, Package, Plus, Tags, Trash2, TrendingUp, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -206,6 +206,11 @@ export default function OwnerDashboard() {
     cancelled: reportOrders.filter(o => o.status === "Cancelled").length,
   }), [reportOrders]);
 
+  const lowStockAlerts = useMemo(() => {
+    if (!medicines) return [];
+    return medicines.filter(m => m.stock !== undefined && m.stock !== null && m.stock <= 10);
+  }, [medicines]);
+
   const navItems = [
     { id: "overview", label: "Overview", icon: BarChart2 },
     { id: "catalogue", label: "Catalogue", icon: Package },
@@ -243,6 +248,31 @@ export default function OwnerDashboard() {
         {/* ─── OVERVIEW ─── */}
         {activeSection === "overview" && (
           <>
+            {/* Low stock alerts */}
+            {lowStockAlerts.length > 0 && (
+              <div className="rounded-2xl border border-orange-500/40 bg-orange-500/10 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle size={18} className="text-orange-400 shrink-0" />
+                  <p className="font-bold text-orange-300">Stock Alert — {lowStockAlerts.length} medicine{lowStockAlerts.length !== 1 ? "s" : ""} running low</p>
+                </div>
+                <div className="space-y-2">
+                  {lowStockAlerts.map(m => (
+                    <div key={m.id} className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-full ${m.stock === 0 ? "bg-red-500/20 text-red-300" : "bg-orange-500/20 text-orange-300"}`}>
+                          {m.stock === 0 ? "OUT" : `${m.stock} left`}
+                        </span>
+                        <span className="text-sm text-white truncate">{m.name}</span>
+                      </div>
+                      <button onClick={() => { editMedicine(m); setActiveSection("catalogue"); }} className="shrink-0 text-xs text-orange-300 font-semibold hover:text-orange-200 underline underline-offset-2">
+                        Update stock
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Summary cards */}
             <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {[

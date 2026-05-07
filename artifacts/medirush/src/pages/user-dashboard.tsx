@@ -220,11 +220,75 @@ export default function UserDashboard() {
     onSuccess: () => refetchAddresses(),
   });
 
-  const refreshCart = () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
-  const onCartError = () => toast({ title: "Could not update cart", variant: "destructive" });
-  const addCartItem = useAddCartItem({ mutation: { onSuccess: refreshCart, onError: onCartError } });
-  const updateCartItem = useUpdateCartItem({ mutation: { onSuccess: refreshCart, onError: onCartError } });
-  const removeCartItem = useRemoveCartItem({ mutation: { onSuccess: refreshCart, onError: onCartError } });
+  const cartKey = getGetCartQueryKey();
+
+  const addCartItem = useAddCartItem({
+    mutation: {
+      onMutate: async ({ data }) => {
+        await queryClient.cancelQueries({ queryKey: cartKey });
+        const previous = queryClient.getQueryData(cartKey);
+        const med = medicines?.find(m => m.id === data.medicineId);
+        if (med) {
+          queryClient.setQueryData(cartKey, (old: any) => {
+            if (!old) return old;
+            const existing = old.items.find((i: any) => i.medicine.id === data.medicineId);
+            const newItems = existing
+              ? old.items.map((i: any) => i.medicine.id === data.medicineId ? { ...i, quantity: i.quantity + data.quantity } : i)
+              : [...old.items, { medicine: med, quantity: data.quantity }];
+            return { items: newItems, total: newItems.reduce((s: number, i: any) => s + i.medicine.price * i.quantity, 0) };
+          });
+        }
+        return { previous };
+      },
+      onError: (_e, _v, ctx: any) => {
+        if (ctx?.previous !== undefined) queryClient.setQueryData(cartKey, ctx.previous);
+        toast({ title: "Could not update cart", variant: "destructive" });
+      },
+      onSettled: () => queryClient.invalidateQueries({ queryKey: cartKey }),
+    },
+  });
+
+  const updateCartItem = useUpdateCartItem({
+    mutation: {
+      onMutate: async ({ medicineId, data }) => {
+        await queryClient.cancelQueries({ queryKey: cartKey });
+        const previous = queryClient.getQueryData(cartKey);
+        queryClient.setQueryData(cartKey, (old: any) => {
+          if (!old) return old;
+          const newItems = data.quantity <= 0
+            ? old.items.filter((i: any) => i.medicine.id !== medicineId)
+            : old.items.map((i: any) => i.medicine.id === medicineId ? { ...i, quantity: data.quantity } : i);
+          return { items: newItems, total: newItems.reduce((s: number, i: any) => s + i.medicine.price * i.quantity, 0) };
+        });
+        return { previous };
+      },
+      onError: (_e, _v, ctx: any) => {
+        if (ctx?.previous !== undefined) queryClient.setQueryData(cartKey, ctx.previous);
+        toast({ title: "Could not update cart", variant: "destructive" });
+      },
+      onSettled: () => queryClient.invalidateQueries({ queryKey: cartKey }),
+    },
+  });
+
+  const removeCartItem = useRemoveCartItem({
+    mutation: {
+      onMutate: async ({ medicineId }) => {
+        await queryClient.cancelQueries({ queryKey: cartKey });
+        const previous = queryClient.getQueryData(cartKey);
+        queryClient.setQueryData(cartKey, (old: any) => {
+          if (!old) return old;
+          const newItems = old.items.filter((i: any) => i.medicine.id !== medicineId);
+          return { items: newItems, total: newItems.reduce((s: number, i: any) => s + i.medicine.price * i.quantity, 0) };
+        });
+        return { previous };
+      },
+      onError: (_e, _v, ctx: any) => {
+        if (ctx?.previous !== undefined) queryClient.setQueryData(cartKey, ctx.previous);
+        toast({ title: "Could not update cart", variant: "destructive" });
+      },
+      onSettled: () => queryClient.invalidateQueries({ queryKey: cartKey }),
+    },
+  });
   const uploadPrescription = useUploadPrescription({ mutation: { onSuccess: (p) => { setPrescriptionId(p.id); toast({ title: "Prescription uploaded" }); } } });
   const createOrder = useCreateOrder({
     mutation: {

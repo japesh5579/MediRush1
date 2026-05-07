@@ -220,6 +220,24 @@ router.post("/auth/signup", async (req, res) => {
   res.status(201).json({ token: signToken({ id: user.id, role: user.role }), user: { id: user.id, fullName: user.fullName, phone: user.phone, email: user.email, location: user.location, role: user.role } });
 });
 
+router.patch("/auth/profile", async (req, res) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const { fullName, phone, location } = req.body as { fullName?: string; phone?: string; location?: string };
+  const sets: string[] = []; const vals: unknown[] = []; let p = 1;
+  if (fullName?.trim()) { sets.push(`full_name=$${p++}`); vals.push(fullName.trim()); }
+  if (phone?.trim()) { sets.push(`phone=$${p++}`); vals.push(phone.trim()); }
+  if (location?.trim()) { sets.push(`location=$${p++}`); vals.push(location.trim()); }
+  if (sets.length === 0) { res.status(400).json({ message: "Nothing to update" }); return; }
+  vals.push(userId);
+  const { rows } = await pool.query<{ id: string; full_name: string; phone: string; email: string; location: string; role: string }>(
+    `UPDATE medirush_users SET ${sets.join(",")} WHERE id=$${p} RETURNING *`, vals
+  );
+  if (!rows[0]) { res.status(404).json({ message: "User not found" }); return; }
+  const u = rows[0];
+  res.json({ id: u.id, fullName: u.full_name, phone: u.phone, email: u.email, location: u.location, role: u.role });
+});
+
 router.post("/auth/login", async (req, res) => {
   const body = LoginBody.parse(req.body);
   const users = await db.select().from(usersTable).where(sql`"email" = ${body.identifier} OR "phone" = ${body.identifier}`).limit(1);

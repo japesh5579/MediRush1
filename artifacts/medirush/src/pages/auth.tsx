@@ -45,11 +45,7 @@ export default function AuthPage() {
           setLocation(res.user.role === "owner" ? "/owner" : "/user");
         },
         onError: (err: any) => {
-          toast({
-            title: "Login Failed",
-            description: err?.message || "Invalid credentials",
-            variant: "destructive",
-          });
+          form.setError("identifier", { message: err?.message || "Invalid email/phone or password" });
         },
       }
     );

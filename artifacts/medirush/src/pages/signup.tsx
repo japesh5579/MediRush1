@@ -50,11 +50,7 @@ export default function SignupPage() {
           setLocation("/user");
         },
         onError: (err: any) => {
-          toast({
-            title: "Signup failed",
-            description: err?.message || "Could not create account",
-            variant: "destructive",
-          });
+          form.setError("email", { message: err?.message || "Could not create account" });
         },
       }
     );

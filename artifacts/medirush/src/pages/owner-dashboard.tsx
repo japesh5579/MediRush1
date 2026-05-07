@@ -40,6 +40,8 @@ export default function OwnerDashboard() {
   const [filterTo, setFilterTo] = useState("");
   const [hideOOS, setHideOOS] = useState(false);
   const [activeSection, setActiveSection] = useState<"overview" | "catalogue" | "orders" | "reports">("overview");
+  const [editingStock, setEditingStock] = useState(false);
+  const [stockEdits, setStockEdits] = useState<Record<string, string>>({});
 
   const { data: summary, isLoading } = useGetDashboardSummary();
   const { data: medicines } = useListMedicines();
@@ -108,6 +110,28 @@ export default function OwnerDashboard() {
   const createCategory = useCreateCategory({ mutation: { onSuccess: () => { refreshOwnerData(); setCategoryName(""); toast({ title: "Category added" }); } } });
   const deleteCategory = useDeleteCategory({ mutation: { onSuccess: refreshOwnerData } });
   const updateOrderStatus = useUpdateOrderStatus({ mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() }) } });
+
+  const saveAllStock = async () => {
+    const entries = Object.entries(stockEdits).filter(([, v]) => v !== "");
+    for (const [medId, val] of entries) {
+      await authFetch(`/api/medirush/medicines/${medId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          ...(medicines?.find(m => m.id === medId) ?? {}),
+          stock: Number(val),
+          categoryId: medicines?.find(m => m.id === medId)?.categoryId ?? "",
+          imageUrl: medicines?.find(m => m.id === medId)?.imageUrl ?? "",
+          description: medicines?.find(m => m.id === medId)?.description ?? "",
+          price: medicines?.find(m => m.id === medId)?.price ?? 0,
+          name: medicines?.find(m => m.id === medId)?.name ?? "",
+        }),
+      });
+    }
+    queryClient.invalidateQueries({ queryKey: getListMedicinesQueryKey() });
+    setEditingStock(false);
+    setStockEdits({});
+    toast({ title: `Stock updated for ${entries.length} medicine${entries.length !== 1 ? "s" : ""}` });
+  };
 
   const saveMedicine = () => {
     const fallbackCategory = medicineForm.categoryId || categories?.[0]?.id || "";
@@ -457,7 +481,22 @@ export default function OwnerDashboard() {
               </Card>
 
               <Card className="border-white/10 bg-white text-slate-950">
-                <CardHeader><CardTitle>Medicine catalogue</CardTitle></CardHeader>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Medicine catalogue</CardTitle>
+                    <div className="flex gap-2">
+                      {editingStock && (
+                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs" onClick={saveAllStock} disabled={Object.keys(stockEdits).length === 0}>
+                          Save all
+                        </Button>
+                      )}
+                      <Button size="sm" variant={editingStock ? "destructive" : "outline"} className="text-xs" onClick={() => { setEditingStock(v => !v); setStockEdits({}); }}>
+                        {editingStock ? "Cancel" : "Edit Stock"}
+                      </Button>
+                    </div>
+                  </div>
+                  {editingStock && <p className="text-xs text-slate-400 mt-1">Edit stock values inline, then tap Save all</p>}
+                </CardHeader>
                 <CardContent className="space-y-3 max-h-[500px] overflow-y-auto">
                   {medicines?.map(medicine => {
                     const oos = medicine.stock !== undefined && medicine.stock !== null && medicine.stock === 0;
@@ -468,20 +507,33 @@ export default function OwnerDashboard() {
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-bold">{medicine.name}</p>
                           <p className="text-sm text-slate-500">{medicine.categoryName}{medicine.company ? ` · ${medicine.company}` : ""}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <p className="text-sm font-semibold text-slate-700">
-                              {money(medicine.price)}
-                              {medicine.mrp && medicine.mrp > medicine.price && <span className="ml-1 text-xs font-normal text-slate-400 line-through">{money(medicine.mrp)}</span>}
-                            </p>
-                            {oos && <span className="text-[10px] bg-red-100 text-red-600 font-bold px-1.5 py-0.5 rounded-full">Out of stock</span>}
-                            {lowStock && <span className="text-[10px] bg-orange-100 text-orange-600 font-bold px-1.5 py-0.5 rounded-full">Low: {medicine.stock}</span>}
-                            {!oos && !lowStock && medicine.stock !== undefined && medicine.stock !== null && (
-                              <span className="text-[10px] bg-green-100 text-green-700 font-bold px-1.5 py-0.5 rounded-full">Stock: {medicine.stock}</span>
-                            )}
-                          </div>
+                          {editingStock ? (
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-slate-500">Stock:</span>
+                              <input
+                                type="number" min="0"
+                                className="w-20 h-7 text-sm border border-slate-300 rounded-lg px-2 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                                placeholder={medicine.stock !== undefined && medicine.stock !== null ? String(medicine.stock) : "—"}
+                                value={stockEdits[medicine.id] ?? ""}
+                                onChange={e => setStockEdits(prev => ({ ...prev, [medicine.id]: e.target.value }))}
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <p className="text-sm font-semibold text-slate-700">
+                                {money(medicine.price)}
+                                {medicine.mrp && medicine.mrp > medicine.price && <span className="ml-1 text-xs font-normal text-slate-400 line-through">{money(medicine.mrp)}</span>}
+                              </p>
+                              {oos && <span className="text-[10px] bg-red-100 text-red-600 font-bold px-1.5 py-0.5 rounded-full">Out of stock</span>}
+                              {lowStock && <span className="text-[10px] bg-orange-100 text-orange-600 font-bold px-1.5 py-0.5 rounded-full">Low: {medicine.stock}</span>}
+                              {!oos && !lowStock && medicine.stock !== undefined && medicine.stock !== null && (
+                                <span className="text-[10px] bg-green-100 text-green-700 font-bold px-1.5 py-0.5 rounded-full">Stock: {medicine.stock}</span>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <Button size="icon" variant="outline" onClick={() => editMedicine(medicine)}><Edit3 size={15} /></Button>
-                        <Button size="icon" variant="destructive" onClick={() => deleteMedicine.mutate({ id: medicine.id })}><Trash2 size={15} /></Button>
+                        {!editingStock && <Button size="icon" variant="outline" onClick={() => editMedicine(medicine)}><Edit3 size={15} /></Button>}
+                        {!editingStock && <Button size="icon" variant="destructive" onClick={() => deleteMedicine.mutate({ id: medicine.id })}><Trash2 size={15} /></Button>}
                       </div>
                     );
                   })}

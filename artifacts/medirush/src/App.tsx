@@ -6,6 +6,23 @@ import NotFound from "@/pages/not-found";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { useState, useEffect } from "react";
 
+function OfflineBanner() {
+  const [online, setOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener("online", up);
+    window.addEventListener("offline", down);
+    return () => { window.removeEventListener("online", up); window.removeEventListener("offline", down); };
+  }, []);
+  if (online) return null;
+  return (
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 99999, background: "#dc2626", color: "#fff", textAlign: "center", padding: "10px 16px", fontSize: 13, fontWeight: 700, letterSpacing: "0.2px" }}>
+      You're offline — check your internet connection
+    </div>
+  );
+}
+
 import AuthPage from "@/pages/auth";
 import SignupPage from "@/pages/signup";
 import UserDashboard from "@/pages/user-dashboard";
@@ -145,6 +162,7 @@ function App() {
           </WouterRouter>
         </AuthProvider>
         <Toaster />
+        <OfflineBanner />
         {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
       </TooltipProvider>
     </QueryClientProvider>

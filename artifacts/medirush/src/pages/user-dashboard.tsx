@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Activity, Bookmark, ChevronDown, ChevronRight, ChevronUp, Clock, FileImage, Home, LogOut, MapPin, Minus, Package, Plus, Printer, RefreshCw, Search, ShoppingCart, Star, Trash2, X, XCircle } from "lucide-react";
+import { Activity, Bell, BellOff, Bookmark, Check, ChevronDown, ChevronRight, ChevronUp, Clock, Edit2, FileImage, Home, LogOut, MapPin, Minus, Package, Plus, Printer, RefreshCw, Search, ShoppingCart, Star, Trash2, X, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,8 +67,26 @@ function printBill(order: Order) {
   w.print();
 }
 
+function OrderCountdown({ createdAt, etaMinutes, status }: { createdAt: string; etaMinutes: number; status: string }) {
+  const targetMs = new Date(createdAt).getTime() + etaMinutes * 60 * 1000;
+  const [remaining, setRemaining] = useState(() => Math.max(0, targetMs - Date.now()));
+  useEffect(() => {
+    const iv = setInterval(() => setRemaining(Math.max(0, targetMs - Date.now())), 1000);
+    return () => clearInterval(iv);
+  }, [targetMs]);
+  if (status === "Delivered" || status === "Cancelled") return null;
+  const mins = Math.floor(remaining / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+  const late = remaining === 0;
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${late ? "bg-orange-100 text-orange-700" : "bg-white/20 text-white"}`}>
+      <Clock size={9} /> {late ? "Arriving soon" : `${mins}:${String(secs).padStart(2, "0")} left`}
+    </span>
+  );
+}
+
 export default function UserDashboard() {
-  const { user, logout } = useAuth();
+  const { user, login, token, logout } = useAuth();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -86,6 +104,15 @@ export default function UserDashboard() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [addrLabel, setAddrLabel] = useState("");
   const [savingAddr, setSavingAddr] = useState(false);
+
+  const [notifyMeIds, setNotifyMeIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("mrh_notify_me") ?? "[]"); } catch { return []; }
+  });
+  const [orderConfirmation, setOrderConfirmation] = useState<{ id: string; total: number; eta: number } | null>(null);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileName, setProfileName] = useState(user?.fullName ?? "");
+  const [profilePhone, setProfilePhone] = useState(user?.phone ?? "");
+  const [profileLocation, setProfileLocation] = useState(user?.location ?? "");
 
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("mrh_search_history") ?? "[]"); } catch { return []; }
@@ -128,6 +155,27 @@ export default function UserDashboard() {
     queryFn: () => authFetch("/api/medirush/saved-addresses"),
   });
 
+  useEffect(() => {
+    if (!medicines || notifyMeIds.length === 0) return;
+    const back = medicines.filter(m => notifyMeIds.includes(m.id) && m.stock != null && m.stock > 0);
+    if (!back.length) return;
+    back.forEach(m => toast({ title: `${m.name} is back in stock!`, description: "Add it to your cart now." }));
+    const remaining = notifyMeIds.filter(id => !back.find(m => m.id === id));
+    localStorage.setItem("mrh_notify_me", JSON.stringify(remaining));
+    setNotifyMeIds(remaining);
+  }, [medicines]);
+
+  const updateProfile = useMutation({
+    mutationFn: (data: { fullName: string; phone: string; location: string }) =>
+      authFetch("/api/medirush/auth/profile", { method: "PATCH", body: JSON.stringify(data) }),
+    onSuccess: (updated) => {
+      login({ ...user!, ...updated }, token!);
+      setEditingProfile(false);
+      toast({ title: "Profile updated" });
+    },
+    onError: (e: any) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
+  });
+
   const cancelOrder = useMutation({
     mutationFn: (orderId: string) => authFetch(`/api/medirush/orders/${orderId}/cancel`, { method: "POST" }),
     onSuccess: () => {
@@ -166,7 +214,7 @@ export default function UserDashboard() {
         setShowCart(false);
         refreshCart();
         queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
-        toast({ title: "Order placed!", description: `Delivery in ${order.etaMinutes} min` });
+        setOrderConfirmation({ id: order.id, total: order.total, eta: order.etaMinutes });
         setActiveTab("orders");
       },
     },
@@ -220,6 +268,14 @@ export default function UserDashboard() {
     toast({ title: "Added to cart", description: "All items from this order were added" });
   };
 
+  const handleNotifyMe = (medId: string) => {
+    const isSet = notifyMeIds.includes(medId);
+    const updated = isSet ? notifyMeIds.filter(id => id !== medId) : [...notifyMeIds, medId];
+    localStorage.setItem("mrh_notify_me", JSON.stringify(updated));
+    setNotifyMeIds(updated);
+    toast({ title: isSet ? "Notification removed" : "We'll notify you when it's back!" });
+  };
+
   const searchSuggestions = useMemo(() => {
     if (!searchQuery || searchQuery.length < 2 || !medicines) return [];
     const q = searchQuery.toLowerCase();
@@ -250,14 +306,16 @@ export default function UserDashboard() {
   const ProductCard = ({ med, size = "grid" }: { med: Medicine; size?: "grid" | "scroll" }) => {
     const qty = getItemQty(med.id);
     const discount = med.mrp && med.mrp > med.price ? Math.round((med.mrp - med.price) / med.mrp * 100) : 0;
-    const lowStock = med.stock !== undefined && med.stock <= 10;
+    const oos = med.stock === 0;
+    const lowStock = med.stock != null && med.stock > 0 && med.stock <= 10;
+    const notifySet = notifyMeIds.includes(med.id);
     if (size === "scroll") {
       return (
         <div className="shrink-0 w-36 bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
           <div className="relative cursor-pointer" onClick={() => handleViewProduct(med)}>
             <img src={med.imageUrl} alt={med.name} className="w-full h-[100px] object-cover" />
-            {lowStock && med.stock! > 0 && <span className="absolute top-1.5 left-1.5 bg-orange-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">Only {med.stock} left</span>}
-            {lowStock && med.stock === 0 && <span className="absolute top-1.5 left-1.5 bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">Out of stock</span>}
+            {lowStock && <span className="absolute top-1.5 left-1.5 bg-orange-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">Only {med.stock} left</span>}
+            {oos && <span className="absolute top-1.5 left-1.5 bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">Out of stock</span>}
           </div>
           <div className="p-2.5 space-y-1">
             <p className="font-bold text-xs leading-tight line-clamp-2 cursor-pointer" onClick={() => handleViewProduct(med)}>{med.name}</p>
@@ -266,8 +324,12 @@ export default function UserDashboard() {
               {discount > 0 && <p className="text-[10px] text-slate-400 line-through leading-none">{money(med.mrp!)}</p>}
               <p className="font-black text-sm text-slate-900">{money(med.price)}</p>
             </div>
-            {qty === 0 ? (
-              <button onClick={() => handleAdd(med.id)} disabled={med.stock === 0} className="w-full border-2 border-green-600 text-green-600 font-bold text-xs py-1 rounded-lg hover:bg-green-50 transition disabled:opacity-40 disabled:cursor-not-allowed">+ Add</button>
+            {oos ? (
+              <button onClick={() => handleNotifyMe(med.id)} className={`w-full text-[10px] py-1 rounded-lg border font-bold flex items-center justify-center gap-1 transition ${notifySet ? "border-orange-400 text-orange-600 bg-orange-50" : "border-slate-200 text-slate-500"}`}>
+                {notifySet ? <><BellOff size={9} /> Notifying</> : <><Bell size={9} /> Notify me</>}
+              </button>
+            ) : qty === 0 ? (
+              <button onClick={() => handleAdd(med.id)} className="w-full border-2 border-green-600 text-green-600 font-bold text-xs py-1 rounded-lg hover:bg-green-50 transition">+ Add</button>
             ) : (
               <div className="flex items-center justify-between border-2 border-green-600 rounded-lg overflow-hidden">
                 <button onClick={() => handleDec(med.id, qty)} className="bg-green-600 text-white px-2 py-1"><Minus size={10} /></button>
@@ -283,8 +345,8 @@ export default function UserDashboard() {
       <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
         <div className="relative cursor-pointer" onClick={() => handleViewProduct(med)}>
           <img src={med.imageUrl} alt={med.name} className="w-full h-28 object-cover" />
-          {lowStock && med.stock! > 0 && <span className="absolute top-1.5 left-1.5 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">Only {med.stock} left</span>}
-          {lowStock && med.stock === 0 && <span className="absolute top-1.5 left-1.5 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">Out of stock</span>}
+          {lowStock && <span className="absolute top-1.5 left-1.5 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">Only {med.stock} left</span>}
+          {oos && <span className="absolute top-1.5 left-1.5 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">Out of stock</span>}
         </div>
         <div className="p-3 space-y-1">
           <p className="font-bold text-sm leading-tight line-clamp-2 cursor-pointer" onClick={() => handleViewProduct(med)}>{med.name}</p>
@@ -294,8 +356,12 @@ export default function UserDashboard() {
               {discount > 0 && <p className="text-[10px] text-slate-400 line-through leading-none">{money(med.mrp!)}</p>}
               <span className="font-black text-sm text-slate-900">{money(med.price)}</span>
             </div>
-            {qty === 0 ? (
-              <button onClick={() => handleAdd(med.id)} disabled={med.stock === 0} className="shrink-0 border-2 border-green-600 text-green-600 font-bold text-xs px-2.5 py-1 rounded-lg hover:bg-green-50 transition disabled:opacity-40 disabled:cursor-not-allowed">Add</button>
+            {oos ? (
+              <button onClick={() => handleNotifyMe(med.id)} className={`shrink-0 text-[10px] px-2 py-1 rounded-lg border font-bold flex items-center gap-0.5 transition ${notifySet ? "border-orange-400 text-orange-600 bg-orange-50" : "border-slate-200 text-slate-500"}`}>
+                {notifySet ? <BellOff size={10} /> : <Bell size={10} />}{notifySet ? "" : " Notify"}
+              </button>
+            ) : qty === 0 ? (
+              <button onClick={() => handleAdd(med.id)} className="shrink-0 border-2 border-green-600 text-green-600 font-bold text-xs px-2.5 py-1 rounded-lg hover:bg-green-50 transition">Add</button>
             ) : (
               <div className="shrink-0 flex items-center gap-0.5 border-2 border-green-600 rounded-lg overflow-hidden">
                 <button onClick={() => handleDec(med.id, qty)} className="bg-green-600 text-white px-1.5 py-1"><Minus size={11} /></button>
@@ -454,10 +520,27 @@ export default function UserDashboard() {
       {activeTab === "orders" && (
         <main className="px-3 pt-4 space-y-3">
           <h2 className="font-bold text-lg">Your Orders</h2>
-          {!orders?.length ? (
-            <div className="text-center py-16 text-slate-400">
-              <Package size={48} className="mx-auto mb-3 opacity-30" />
-              <p>No orders yet</p>
+          {!orders ? (
+            <div className="space-y-3">
+              {[1,2,3].map(i => (
+                <div key={i} className="bg-white rounded-2xl overflow-hidden border border-slate-100">
+                  <div className="h-14 bg-green-100 animate-pulse" />
+                  <div className="p-4 space-y-2.5">
+                    <div className="h-3 bg-slate-100 rounded-full animate-pulse w-3/4" />
+                    <div className="h-3 bg-slate-100 rounded-full animate-pulse w-1/2" />
+                    <div className="h-3 bg-slate-100 rounded-full animate-pulse w-2/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : !orders.length ? (
+            <div className="text-center py-16">
+              <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Package size={36} className="text-slate-300" />
+              </div>
+              <p className="font-bold text-slate-600 text-lg">No orders yet</p>
+              <p className="text-slate-400 text-sm mt-1">Your past orders will appear here</p>
+              <button onClick={() => setActiveTab("home")} className="mt-4 bg-green-600 text-white font-bold px-6 py-2.5 rounded-2xl text-sm">Browse Medicines</button>
             </div>
           ) : [...orders].reverse().map(order => {
             const stepIndex = order.status === "Cancelled" ? -1 : STATUS_STEPS.indexOf(order.status);
@@ -469,7 +552,10 @@ export default function UserDashboard() {
                     <p className="text-white font-bold text-sm">Order Receipt</p>
                     <p className="text-green-200 text-[10px]">{new Date(order.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</p>
                   </div>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${order.status === "Placed" ? "bg-blue-100 text-blue-700" : order.status === "Cancelled" ? "bg-white text-red-600" : "bg-white text-green-700"}`}>{order.status}</span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${order.status === "Placed" ? "bg-blue-100 text-blue-700" : order.status === "Cancelled" ? "bg-white text-red-600" : "bg-white text-green-700"}`}>{order.status}</span>
+                    <OrderCountdown createdAt={order.createdAt} etaMinutes={order.etaMinutes} status={order.status} />
+                  </div>
                 </div>
 
                 {/* Status timeline */}
@@ -556,13 +642,33 @@ export default function UserDashboard() {
       {/* Tab: Account */}
       {activeTab === "account" && (
         <main className="px-3 pt-4 space-y-4">
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-green-600 flex items-center justify-center text-white text-2xl font-black">{user?.fullName?.[0]?.toUpperCase()}</div>
-            <div>
-              <p className="font-bold text-lg">{user?.fullName}</p>
-              <p className="text-sm text-slate-500">{user?.email}</p>
-              <p className="text-sm text-slate-500">{user?.phone}</p>
-            </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            {!editingProfile ? (
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-green-600 flex items-center justify-center text-white text-2xl font-black shrink-0">{user?.fullName?.[0]?.toUpperCase()}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-lg truncate">{user?.fullName}</p>
+                  <p className="text-sm text-slate-500 truncate">{user?.email}</p>
+                  <p className="text-sm text-slate-500">{user?.phone}</p>
+                </div>
+                <button onClick={() => { setProfileName(user?.fullName ?? ""); setProfilePhone(user?.phone ?? ""); setProfileLocation(user?.location ?? ""); setEditingProfile(true); }} className="shrink-0 p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200">
+                  <Edit2 size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="font-bold text-sm text-slate-700">Edit Profile</p>
+                <Input value={profileName} onChange={e => setProfileName(e.target.value)} placeholder="Full name" className="text-sm" />
+                <Input value={profilePhone} onChange={e => setProfilePhone(e.target.value)} placeholder="Phone number" className="text-sm" />
+                <Input value={profileLocation} onChange={e => setProfileLocation(e.target.value)} placeholder="Default delivery address" className="text-sm" />
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" onClick={() => updateProfile.mutate({ fullName: profileName, phone: profilePhone, location: profileLocation })} disabled={updateProfile.isPending} className="flex-1 bg-green-600 hover:bg-green-700">
+                    {updateProfile.isPending ? "Saving..." : "Save changes"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setEditingProfile(false)}>Cancel</Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Saved Addresses */}
@@ -658,7 +764,14 @@ export default function UserDashboard() {
             </div>
             <div className="overflow-y-auto flex-1 px-4 py-3 space-y-3">
               {cart?.items.length === 0 ? (
-                <div className="text-center py-10 text-slate-400">Your cart is empty</div>
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <ShoppingCart size={28} className="text-slate-300" />
+                  </div>
+                  <p className="font-bold text-slate-600">Your cart is empty</p>
+                  <p className="text-slate-400 text-sm mt-1">Add medicines to get started</p>
+                  <button onClick={() => setShowCart(false)} className="mt-4 bg-green-600 text-white font-bold px-5 py-2 rounded-2xl text-sm">Browse Medicines</button>
+                </div>
               ) : cart?.items.map(item => (
                 <div key={item.medicine.id} className="flex items-center gap-3 bg-slate-50 rounded-2xl p-3">
                   <img src={item.medicine.imageUrl} alt={item.medicine.name} className="w-14 h-14 rounded-xl object-cover" />
@@ -752,6 +865,36 @@ export default function UserDashboard() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Order Confirmation Overlay */}
+      {orderConfirmation && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-6" onClick={() => setOrderConfirmation(null)}>
+          <div className="bg-white rounded-3xl p-8 w-full max-w-sm text-center shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 bg-green-600 rounded-full flex items-center justify-center">
+                <Check size={28} className="text-white" strokeWidth={3} />
+              </div>
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 mb-1">Order Placed!</h2>
+            <p className="text-slate-500 text-sm mb-5">Your medicines are on their way</p>
+            <div className="bg-green-50 rounded-2xl p-4 space-y-2 mb-6 text-left">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">Total paid</span>
+                <span className="font-bold">{money(orderConfirmation.total)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">Estimated delivery</span>
+                <span className="font-bold text-green-700">{orderConfirmation.eta} min</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">Delivery charges</span>
+                <span className="font-bold text-green-700">FREE</span>
+              </div>
+            </div>
+            <button onClick={() => setOrderConfirmation(null)} className="w-full bg-green-600 text-white font-bold py-3.5 rounded-2xl text-base">Track Order</button>
           </div>
         </div>
       )}

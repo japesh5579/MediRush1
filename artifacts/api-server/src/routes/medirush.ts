@@ -1,16 +1,29 @@
 import { Router, type Request, type Response } from "express";
 import { sql } from "drizzle-orm";
-import { v2 as cloudinary } from "cloudinary";
 import { db, pool, cartItemsTable, categoriesTable, medicinesTable, ordersTable, prescriptionsTable, usersTable, savedAddressesTable } from "@workspace/db";
 import { AddCartItemBody, CreateCategoryBody, CreateMedicineBody, CreateOrderBody, DeleteCategoryParams, DeleteMedicineParams, ListMedicinesQueryParams, LoginBody, RemoveCartItemParams, SignupBody, UpdateCartItemBody, UpdateCartItemParams, UpdateMedicineBody, UpdateMedicineParams, UploadPrescriptionBody } from "@workspace/api-zod";
 import crypto from "node:crypto";
 
-if (process.env.CLOUDINARY_CLOUD_NAME) {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
+async function uploadToCloudinary(dataUrl: string): Promise<string> {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME!;
+  const apiKey = process.env.CLOUDINARY_API_KEY!;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET!;
+  const folder = "medirush/medicines";
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signature = crypto.createHash("sha1").update(`folder=${folder}&timestamp=${timestamp}${apiSecret}`).digest("hex");
+  const form = new FormData();
+  form.append("file", dataUrl);
+  form.append("api_key", apiKey);
+  form.append("timestamp", String(timestamp));
+  form.append("signature", signature);
+  form.append("folder", folder);
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: form });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({})) as any;
+    throw new Error(err?.error?.message ?? "Cloudinary upload failed");
+  }
+  const data = await response.json() as { secure_url: string };
+  return data.secure_url.replace("/upload/", "/upload/w_500,h_500,c_fill,q_75,f_webp/");
 }
 
 const router = Router();
@@ -948,12 +961,8 @@ router.post("/upload/medicine-image", async (req, res) => {
     res.status(413).json({ message: "Image too large. Please use a photo under 4 MB." });
     return;
   }
-  const result = await cloudinary.uploader.upload(dataUrl, {
-    folder: "medirush/medicines",
-    transformation: [{ width: 500, height: 500, crop: "fill", quality: 75, fetch_format: "webp" }],
-    resource_type: "image",
-  });
-  res.json({ url: result.secure_url });
+  const url = await uploadToCloudinary(dataUrl);
+  res.json({ url });
 });
 
 router.post("/auth/signup", async (req, res) => {

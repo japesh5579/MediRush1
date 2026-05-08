@@ -1121,6 +1121,11 @@ router.delete("/cart", async (req, res) => {
 
 router.post("/prescriptions", async (req, res) => {
   const body = UploadPrescriptionBody.parse(req.body);
+  const sizeBytes = Buffer.byteLength(body.dataUrl, "utf8");
+  if (sizeBytes > 1.5 * 1024 * 1024) {
+    res.status(413).json({ message: "Image too large. Please upload a smaller photo (max 1 MB)." });
+    return;
+  }
   const prescription = { id: id("rx"), fileName: body.fileName, imageUrl: body.dataUrl };
   const rxResult = await pool.query<{ id: string; file_name: string; image_url: string; created_at: Date }>(
     `INSERT INTO medirush_prescriptions (id,file_name,image_url) VALUES ($1,$2,$3) RETURNING *`,

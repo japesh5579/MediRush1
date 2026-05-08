@@ -11,6 +11,24 @@ type Role = "user" | "owner";
 type MedicineRow = typeof medicinesTable.$inferSelect;
 type CategoryRow = typeof categoriesTable.$inferSelect;
 
+let _cachedMedicines: MedicineRow[] | null = null;
+let _cachedCategories: CategoryRow[] | null = null;
+
+async function getCatalog(): Promise<{ medicines: MedicineRow[]; categories: CategoryRow[] }> {
+  if (!_cachedMedicines || !_cachedCategories) {
+    [_cachedMedicines, _cachedCategories] = await Promise.all([
+      db.select().from(medicinesTable),
+      db.select().from(categoriesTable),
+    ]);
+  }
+  return { medicines: _cachedMedicines!, categories: _cachedCategories! };
+}
+
+function invalidateCatalog() {
+  _cachedMedicines = null;
+  _cachedCategories = null;
+}
+
 type CartLine = {
   medicine: ReturnType<typeof serializeMedicine>;
   quantity: number;
@@ -876,17 +894,16 @@ async function ensureOtcProducts() {
   }
 }
 
-const ready = ensureTables().then(() => ensureSeedData()).then(() => ensureOtcProducts()).catch((err) => {
+const ready = ensureTables().then(() => ensureSeedData()).then(() => ensureOtcProducts()).then(() => getCatalog()).catch((err) => {
   console.warn("DB init skipped:", err?.message ?? err);
 });
 
 async function getCartPayload(userId: string) {
-  const [cartResult, medicines, categories] = await Promise.all([
+  const [cartResult, { medicines, categories }] = await Promise.all([
     pool.query<{ id: string; medicine_id: string; quantity: number }>(
       `SELECT id, medicine_id, quantity FROM medirush_cart_items WHERE user_id = $1`, [userId]
     ),
-    db.select().from(medicinesTable),
-    db.select().from(categoriesTable),
+    getCatalog(),
   ]);
 
   const items: CartLine[] = cartResult.rows.flatMap((row) => {
@@ -970,7 +987,7 @@ router.post("/auth/login", async (req, res) => {
 
 router.get("/medicines", async (req, res) => {
   const params = ListMedicinesQueryParams.parse(req.query);
-  const [medicines, categories] = await Promise.all([db.select().from(medicinesTable), db.select().from(categoriesTable)]);
+  const { medicines, categories } = await getCatalog();
   const search = params.search?.trim().toLowerCase();
   const filtered = medicines.filter((medicine) => {
     const matchesSearch = !search || medicine.name.toLowerCase().includes(search) || medicine.description.toLowerCase().includes(search);
@@ -988,7 +1005,8 @@ router.post("/medicines", async (req, res) => {
     `INSERT INTO medirush_medicines (id, name, price, mrp, company, stock, category_id, image_url, description) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
     [medicine.id, medicine.name, medicine.price, medicine.mrp ?? null, medicine.company ?? null, (medicine as any).stock ?? null, medicine.categoryId, medicine.imageUrl, medicine.description]
   );
-  const categories = await db.select().from(categoriesTable);
+  invalidateCatalog();
+  const { categories } = await getCatalog();
   res.status(201).json(serializeMedicine(medicine as any, categories));
 });
 
@@ -1012,7 +1030,8 @@ router.put("/medicines/:id", async (req, res) => {
   );
   if (!medResult.rows[0]) { res.status(404).json({ message: "Medicine not found" }); return; }
   const m = medResult.rows[0];
-  const categories = await db.select().from(categoriesTable);
+  invalidateCatalog();
+  const { categories } = await getCatalog();
   res.json(serializeMedicine({ id: m.id, name: m.name, price: m.price, mrp: m.mrp, company: m.company, categoryId: m.category_id, imageUrl: m.image_url, description: m.description, createdAt: m.created_at } as MedicineRow, categories));
 });
 
@@ -1021,11 +1040,12 @@ router.delete("/medicines/:id", async (req, res) => {
   const params = DeleteMedicineParams.parse(req.params);
   await db.delete(cartItemsTable).where(sql`"medicine_id" = ${params.id}`);
   await db.delete(medicinesTable).where(sql`"id" = ${params.id}`);
+  invalidateCatalog();
   res.status(204).send();
 });
 
 router.get("/categories", async (_req, res) => {
-  const categories = await db.select().from(categoriesTable);
+  const { categories } = await getCatalog();
   res.json(categories.map((category) => ({ id: category.id, name: category.name })));
 });
 
@@ -1034,6 +1054,7 @@ router.post("/categories", async (req, res) => {
   const body = CreateCategoryBody.parse(req.body);
   const category = { id: id("cat"), name: body.name };
   await db.insert(categoriesTable).values(category);
+  invalidateCatalog();
   res.status(201).json(category);
 });
 
@@ -1041,6 +1062,7 @@ router.delete("/categories/:id", async (req, res) => {
   if (!requireOwner(req, res)) return;
   const params = DeleteCategoryParams.parse(req.params);
   await db.delete(categoriesTable).where(sql`"id" = ${params.id}`);
+  invalidateCatalog();
   res.status(204).send();
 });
 
@@ -1237,7 +1259,7 @@ router.post("/orders/:id/rate", async (req, res) => {
 });
 
 router.get("/dashboard/summary", async (_req, res) => {
-  const [medicines, categories, orders] = await Promise.all([db.select().from(medicinesTable), db.select().from(categoriesTable), db.select().from(ordersTable)]);
+  const [{ medicines, categories }, orders] = await Promise.all([getCatalog(), db.select().from(ordersTable)]);
   res.json({ medicines: medicines.length, categories: categories.length, orders: orders.length, revenue: orders.reduce((sum, order) => sum + order.total, 0) });
 });
 

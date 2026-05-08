@@ -208,6 +208,9 @@ async function ensureSeedData() {
 }
 
 async function ensureOtcProducts() {
+  const { rows } = await pool.query<{ count: string }>(`SELECT COUNT(*) as count FROM medirush_medicines`);
+  if (parseInt(rows[0]?.count ?? "0") > 10) return;
+
   const cats: Record<string, string> = {
     "Hydration":         "cat_hydration",
     "Calcium Supplement":"cat_calcium",

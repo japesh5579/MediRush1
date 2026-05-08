@@ -95,7 +95,12 @@ export default function AuthPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full mt-4" disabled={loginMutation.isPending}>
+              <div className="flex justify-end">
+                <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+              <Button type="submit" className="w-full mt-2" disabled={loginMutation.isPending}>
                 {loginMutation.isPending ? "Signing in..." : "Sign In"}
               </Button>
             </form>

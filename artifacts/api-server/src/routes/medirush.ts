@@ -195,6 +195,10 @@ async function ensureTables() {
       address TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Pending',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS medirush_password_reset_tokens (
+      token TEXT PRIMARY KEY, user_id TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `);
 }
 
@@ -1027,6 +1031,54 @@ router.post("/auth/login", async (req, res) => {
   }
   const role = user.role as Role;
   res.json({ token: signToken({ id: user.id, role }), user: serializeUser(user) });
+});
+
+router.post("/auth/forgot-password", async (req, res) => {
+  const { email } = req.body as { email?: string };
+  if (!email) { res.status(400).json({ message: "Email is required" }); return; }
+  const users = await db.select().from(usersTable).where(sql`"email" = ${email.toLowerCase().trim()}`).limit(1);
+  if (users.length > 0) {
+    const user = users[0]!;
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+    await pool.query("DELETE FROM medirush_password_reset_tokens WHERE user_id = $1", [user.id]);
+    await pool.query("INSERT INTO medirush_password_reset_tokens (token, user_id, expires_at) VALUES ($1, $2, $3)", [token, user.id, expiresAt]);
+    const appUrl = process.env.APP_URL || "https://medirush1.onrender.com";
+    const resetUrl = `${appUrl}/reset-password?token=${token}`;
+    const resendKey = process.env.RESEND_API_KEY;
+    if (resendKey) {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: process.env.RESEND_FROM_EMAIL || "Medirush <onboarding@resend.dev>",
+          to: [email],
+          subject: "Reset your Medirush password",
+          html: `<div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto"><div style="background:#00C853;padding:24px;border-radius:12px 12px 0 0;text-align:center"><h1 style="color:white;margin:0;font-size:24px">Medirush</h1></div><div style="background:#f9f9f9;padding:32px;border-radius:0 0 12px 12px"><h2 style="margin-top:0">Reset your password</h2><p>Click the button below to reset your password. This link expires in <b>1 hour</b>.</p><a href="${resetUrl}" style="display:inline-block;background:#00C853;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700">Reset Password</a><p style="margin-top:24px;color:#666;font-size:13px">If you didn't request this, ignore this email. Your password won't change.</p></div></div>`
+        })
+      }).catch(() => {});
+    }
+  }
+  res.json({ message: "If that email is registered, you'll receive a reset link shortly." });
+});
+
+router.post("/auth/reset-password", async (req, res) => {
+  const { token, password } = req.body as { token?: string; password?: string };
+  if (!token || !password) { res.status(400).json({ message: "Token and password are required" }); return; }
+  if (password.length < 6) { res.status(400).json({ message: "Password must be at least 6 characters" }); return; }
+  const result = await pool.query<{ user_id: string; expires_at: Date }>(
+    "SELECT user_id, expires_at FROM medirush_password_reset_tokens WHERE token = $1", [token]
+  );
+  if (result.rows.length === 0) { res.status(400).json({ message: "Invalid or expired reset link" }); return; }
+  const row = result.rows[0]!;
+  if (new Date(row.expires_at) < new Date()) {
+    await pool.query("DELETE FROM medirush_password_reset_tokens WHERE token = $1", [token]);
+    res.status(400).json({ message: "Reset link has expired. Please request a new one." }); return;
+  }
+  const passwordHash = hashPassword(password);
+  await pool.query("UPDATE medirush_users SET password_hash = $1 WHERE id = $2", [passwordHash, row.user_id]);
+  await pool.query("DELETE FROM medirush_password_reset_tokens WHERE token = $1", [token]);
+  res.json({ message: "Password reset successfully. You can now log in." });
 });
 
 router.get("/medicines", async (req, res) => {

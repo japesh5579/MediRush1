@@ -25,6 +25,8 @@ function OfflineBanner() {
 
 import AuthPage from "@/pages/auth";
 import SignupPage from "@/pages/signup";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 import UserDashboard from "@/pages/user-dashboard";
 import OwnerDashboard from "@/pages/owner-dashboard";
 
@@ -139,6 +141,8 @@ function Router() {
         )}
       </Route>
       <Route path="/signup" component={SignupPage} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/user">
         <ProtectedRoute component={UserDashboard} allowedRole="user" />
       </Route>

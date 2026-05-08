@@ -18,7 +18,7 @@ type TestBooking = { id: string; tests: LabTest[]; total: number; date: string; 
 type SavedAddress = { id: string; label: string; address: string; createdAt: string };
 
 const FAQ_ITEMS = [
-  { q: "How long does delivery take?", a: "We deliver in 10-20 minutes from the nearest pharmacy." },
+  { q: "How long does delivery take?", a: "We deliver in 15-20 minutes from the nearest pharmacy." },
   { q: "Can I cancel my order?", a: "Yes, tap Cancel on any order that is still in 'Placed' status." },
   { q: "Do you accept prescriptions?", a: "Yes, you can upload a prescription photo when placing your order." },
   { q: "What payment methods are accepted?", a: "Cash on Delivery (COD) and UPI payment." },
@@ -490,7 +490,7 @@ export default function UserDashboard() {
           <div className="flex items-center gap-2">
             <Activity size={22} className="text-white" />
             <span className="text-white font-black text-lg tracking-tight">Medirush</span>
-            <span className="bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full">10 MIN</span>
+            <span className="bg-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full">15-20 MIN</span>
           </div>
           <button onClick={() => setShowCart(true)} className="relative p-2">
             <ShoppingCart size={22} className="text-white" />
@@ -571,7 +571,7 @@ export default function UserDashboard() {
           <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-center gap-3">
             <div className="bg-green-600 rounded-xl p-2.5"><Clock size={20} className="text-white" /></div>
             <div>
-              <p className="font-bold text-green-800">Medicine in 10-20 minutes</p>
+              <p className="font-bold text-green-800">Medicine in 15-20 minutes</p>
               <p className="text-xs text-green-600">Pharmacy verified · Free delivery</p>
             </div>
           </div>
@@ -617,6 +617,20 @@ export default function UserDashboard() {
               (categoryId ? categories?.filter(c => c.id === categoryId) : categories)?.map(cat => {
                 const catMeds = medicinesByCategory.get(cat.id) ?? [];
                 if (catMeds.length === 0) return null;
+
+                // "See all" view — full vertical grid (Blinkit-style)
+                if (categoryId) {
+                  return (
+                    <div key={cat.id}>
+                      <p className="text-xs text-slate-400 mb-3">{catMeds.length} medicines</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {catMeds.map(med => <ProductCard key={med.id} med={med} size="grid" />)}
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Home view — horizontal scroll with 10 items
                 const limit = 10;
                 const displayed = catMeds.slice(0, limit);
                 const hasMore = catMeds.length > limit;

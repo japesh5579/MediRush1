@@ -88,7 +88,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
         letterSpacing: "0.5px",
         fontFamily: "Inter, sans-serif",
       }}>
-        ⚡ Medicine in 10 Minutes
+        ⚡ Medicine in 15-20 Minutes
       </div>
 
       {/* Dots loader */}

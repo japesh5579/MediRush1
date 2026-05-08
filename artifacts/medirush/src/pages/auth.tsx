@@ -58,7 +58,7 @@ export default function AuthPage() {
           <Activity size={32} />
         </div>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Medirush</h1>
-        <p className="text-muted-foreground mt-2">10-minute medicine delivery.</p>
+        <p className="text-muted-foreground mt-2">15-20 minute medicine delivery.</p>
       </div>
 
       <Card className="w-full max-w-md shadow-xl border-border/50">

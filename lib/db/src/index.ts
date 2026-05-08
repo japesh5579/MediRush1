@@ -10,7 +10,7 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-const sslRequired = process.env.DATABASE_URL.includes("sslmode=require") || process.env.DATABASE_URL.includes("neon.tech");
+const sslRequired = process.env.DATABASE_URL.includes("sslmode=require") || process.env.DATABASE_URL.includes("sslmode=verify-full") || process.env.DATABASE_URL.includes("neon.tech") || process.env.DATABASE_URL.includes("cockroachlabs.cloud");
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: sslRequired ? { rejectUnauthorized: false } : undefined,

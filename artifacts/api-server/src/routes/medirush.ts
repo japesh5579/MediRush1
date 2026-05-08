@@ -1,8 +1,17 @@
 import { Router, type Request, type Response } from "express";
 import { sql } from "drizzle-orm";
+import { v2 as cloudinary } from "cloudinary";
 import { db, pool, cartItemsTable, categoriesTable, medicinesTable, ordersTable, prescriptionsTable, usersTable, savedAddressesTable } from "@workspace/db";
 import { AddCartItemBody, CreateCategoryBody, CreateMedicineBody, CreateOrderBody, DeleteCategoryParams, DeleteMedicineParams, ListMedicinesQueryParams, LoginBody, RemoveCartItemParams, SignupBody, UpdateCartItemBody, UpdateCartItemParams, UpdateMedicineBody, UpdateMedicineParams, UploadPrescriptionBody } from "@workspace/api-zod";
 import crypto from "node:crypto";
+
+if (process.env.CLOUDINARY_CLOUD_NAME) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+}
 
 const router = Router();
 const tokenSecret = process.env.JWT_SECRET ?? process.env.SESSION_SECRET ?? "medirush-development-secret";
@@ -922,6 +931,29 @@ async function getCartPayload(userId: string) {
 router.use(async (_req, _res, next) => {
   await ready;
   next();
+});
+
+router.post("/upload/medicine-image", async (req, res) => {
+  if (!requireOwner(req, res)) return;
+  if (!process.env.CLOUDINARY_CLOUD_NAME) {
+    res.status(503).json({ message: "Image upload not configured. Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET to Render environment." });
+    return;
+  }
+  const { dataUrl } = req.body as { dataUrl?: string };
+  if (!dataUrl || !dataUrl.startsWith("data:image/")) {
+    res.status(400).json({ message: "Invalid image data" });
+    return;
+  }
+  if (Buffer.byteLength(dataUrl, "utf8") > 5 * 1024 * 1024) {
+    res.status(413).json({ message: "Image too large. Please use a photo under 4 MB." });
+    return;
+  }
+  const result = await cloudinary.uploader.upload(dataUrl, {
+    folder: "medirush/medicines",
+    transformation: [{ width: 500, height: 500, crop: "fill", quality: 75, fetch_format: "webp" }],
+    resource_type: "image",
+  });
+  res.json({ url: result.secure_url });
 });
 
 router.post("/auth/signup", async (req, res) => {

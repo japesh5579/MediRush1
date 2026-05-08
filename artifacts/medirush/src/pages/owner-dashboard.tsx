@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Activity, AlertTriangle, BarChart2, DollarSign, Edit3, FileText, FlaskConical, ListOrdered, LogOut, Package, Plus, Tags, Trash2, TrendingUp, Upload } from "lucide-react";
+import { Activity, AlertTriangle, BarChart2, DollarSign, Edit3, FileText, FlaskConical, ListOrdered, Loader2, LogOut, Package, Plus, Tags, Trash2, TrendingUp, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,6 +44,7 @@ export default function OwnerDashboard() {
   const [stockEdits, setStockEdits] = useState<Record<string, string>>({});
   const [testForm, setTestForm] = useState({ name: "", price: "", description: "", preparation: "", turnaroundTime: "24 hrs" });
   const [editingTestId, setEditingTestId] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const { data: summary, isLoading } = useGetDashboardSummary();
   const { data: medicines } = useListMedicines();
@@ -466,15 +467,39 @@ export default function OwnerDashboard() {
                 </div>
                 <div className="grid gap-2">
                   <Label>Product Photo</Label>
-                  {medicineForm.imageUrl && <img src={medicineForm.imageUrl} alt="Preview" className="h-24 w-full rounded-xl object-cover bg-slate-100" />}
-                  <label className="flex cursor-pointer items-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-3 hover:border-emerald-400 transition-colors">
-                    <Upload size={16} className="shrink-0 text-slate-400" />
-                    <span className="text-sm text-slate-500">{medicineForm.imageUrl ? "Change photo" : "Upload photo"}</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={e => {
-                      const file = e.target.files?.[0]; if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = () => setMedicineForm(prev => ({ ...prev, imageUrl: String(reader.result) }));
-                      reader.readAsDataURL(file);
+                  {medicineForm.imageUrl && (
+                    <img src={medicineForm.imageUrl} alt="Preview" className="h-24 w-full rounded-xl object-cover bg-slate-100" />
+                  )}
+                  <label className={`flex cursor-pointer items-center gap-2 rounded-xl border-2 border-dashed p-3 transition-colors ${uploadingPhoto ? "border-emerald-400 bg-emerald-50 cursor-wait" : "border-slate-200 hover:border-emerald-400"}`}>
+                    {uploadingPhoto ? <Loader2 size={16} className="shrink-0 text-emerald-500 animate-spin" /> : <Upload size={16} className="shrink-0 text-slate-400" />}
+                    <span className="text-sm text-slate-500">{uploadingPhoto ? "Uploading to Cloudinary..." : medicineForm.imageUrl ? "Change photo" : "Upload photo"}</span>
+                    <input type="file" accept="image/*" className="hidden" disabled={uploadingPhoto} onChange={async e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 5 * 1024 * 1024) {
+                        toast({ title: "Image too large", description: "Please use a photo under 4 MB.", variant: "destructive" });
+                        e.target.value = "";
+                        return;
+                      }
+                      setUploadingPhoto(true);
+                      try {
+                        const dataUrl = await new Promise<string>((resolve) => {
+                          const reader = new FileReader();
+                          reader.onload = () => resolve(reader.result as string);
+                          reader.readAsDataURL(file);
+                        });
+                        const result = await authFetch("/api/upload/medicine-image", {
+                          method: "POST",
+                          body: JSON.stringify({ dataUrl }),
+                        });
+                        setMedicineForm(prev => ({ ...prev, imageUrl: result.url }));
+                        toast({ title: "Photo uploaded" });
+                      } catch (err: any) {
+                        toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+                      } finally {
+                        setUploadingPhoto(false);
+                        e.target.value = "";
+                      }
                     }} />
                   </label>
                 </div>

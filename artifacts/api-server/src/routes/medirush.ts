@@ -1052,6 +1052,9 @@ router.post("/auth/forgot-password", async (req, res) => {
       const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: { user: gmailUser, pass: gmailPass },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 10000,
       });
       await transporter.sendMail({
         from: `Medirush <${gmailUser}>`,

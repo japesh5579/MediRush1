@@ -1,7 +1,7 @@
 {
   "name": "Medirush",
   "short_name": "Medirush",
-  "description": "Medicine delivered in 10 minutes",
+  "description": "Medicine delivered in 15-20 minutes",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

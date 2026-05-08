@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { sql } from "drizzle-orm";
+import nodemailer from "nodemailer";
 import { db, pool, cartItemsTable, categoriesTable, medicinesTable, ordersTable, prescriptionsTable, usersTable, savedAddressesTable } from "@workspace/db";
 import { AddCartItemBody, CreateCategoryBody, CreateMedicineBody, CreateOrderBody, DeleteCategoryParams, DeleteMedicineParams, ListMedicinesQueryParams, LoginBody, RemoveCartItemParams, SignupBody, UpdateCartItemBody, UpdateCartItemParams, UpdateMedicineBody, UpdateMedicineParams, UploadPrescriptionBody } from "@workspace/api-zod";
 import crypto from "node:crypto";
@@ -1045,17 +1046,18 @@ router.post("/auth/forgot-password", async (req, res) => {
     await pool.query("INSERT INTO medirush_password_reset_tokens (token, user_id, expires_at) VALUES ($1, $2, $3)", [token, user.id, expiresAt]);
     const appUrl = process.env.APP_URL || "https://medirush1.onrender.com";
     const resetUrl = `${appUrl}/reset-password?token=${token}`;
-    const resendKey = process.env.RESEND_API_KEY;
-    if (resendKey) {
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: process.env.RESEND_FROM_EMAIL || "Medirush <onboarding@resend.dev>",
-          to: [email],
-          subject: "Reset your Medirush password",
-          html: `<div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto"><div style="background:#00C853;padding:24px;border-radius:12px 12px 0 0;text-align:center"><h1 style="color:white;margin:0;font-size:24px">Medirush</h1></div><div style="background:#f9f9f9;padding:32px;border-radius:0 0 12px 12px"><h2 style="margin-top:0">Reset your password</h2><p>Click the button below to reset your password. This link expires in <b>1 hour</b>.</p><a href="${resetUrl}" style="display:inline-block;background:#00C853;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700">Reset Password</a><p style="margin-top:24px;color:#666;font-size:13px">If you didn't request this, ignore this email. Your password won't change.</p></div></div>`
-        })
+    const gmailUser = process.env.GMAIL_USER;
+    const gmailPass = process.env.GMAIL_PASS;
+    if (gmailUser && gmailPass) {
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: { user: gmailUser, pass: gmailPass },
+      });
+      await transporter.sendMail({
+        from: `Medirush <${gmailUser}>`,
+        to: email,
+        subject: "Reset your Medirush password",
+        html: `<div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto"><div style="background:#00C853;padding:24px;border-radius:12px 12px 0 0;text-align:center"><h1 style="color:white;margin:0;font-size:24px">Medirush</h1></div><div style="background:#f9f9f9;padding:32px;border-radius:0 0 12px 12px"><h2 style="margin-top:0">Reset your password</h2><p>Click the button below to reset your password. This link expires in <b>1 hour</b>.</p><a href="${resetUrl}" style="display:inline-block;background:#00C853;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700">Reset Password</a><p style="margin-top:24px;color:#666;font-size:13px">If you didn't request this, ignore this email. Your password won't change.</p></div></div>`,
       }).catch(() => {});
     }
   }

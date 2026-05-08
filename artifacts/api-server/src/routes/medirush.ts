@@ -1046,18 +1046,20 @@ router.post("/auth/forgot-password", async (req, res) => {
     await pool.query("INSERT INTO medirush_password_reset_tokens (token, user_id, expires_at) VALUES ($1, $2, $3)", [token, user.id, expiresAt]);
     const appUrl = process.env.APP_URL || "https://medirush1.onrender.com";
     const resetUrl = `${appUrl}/reset-password?token=${token}`;
-    const gmailUser = process.env.GMAIL_USER;
-    const gmailPass = process.env.GMAIL_PASS;
-    if (gmailUser && gmailPass) {
+    const brevoUser = process.env.BREVO_USER;
+    const brevoPass = process.env.BREVO_PASS;
+    if (brevoUser && brevoPass) {
       const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: { user: gmailUser, pass: gmailPass },
-        connectionTimeout: 5000,
-        greetingTimeout: 5000,
+        host: "smtp-relay.brevo.com",
+        port: 587,
+        secure: false,
+        auth: { user: brevoUser, pass: brevoPass },
+        connectionTimeout: 8000,
+        greetingTimeout: 8000,
         socketTimeout: 10000,
       });
       await transporter.sendMail({
-        from: `Medirush <${gmailUser}>`,
+        from: `Medirush <${brevoUser}>`,
         to: email,
         subject: "Reset your Medirush password",
         html: `<div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto"><div style="background:#00C853;padding:24px;border-radius:12px 12px 0 0;text-align:center"><h1 style="color:white;margin:0;font-size:24px">Medirush</h1></div><div style="background:#f9f9f9;padding:32px;border-radius:0 0 12px 12px"><h2 style="margin-top:0">Reset your password</h2><p>Click the button below to reset your password. This link expires in <b>1 hour</b>.</p><a href="${resetUrl}" style="display:inline-block;background:#00C853;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700">Reset Password</a><p style="margin-top:24px;color:#666;font-size:13px">If you didn't request this, ignore this email. Your password won't change.</p></div></div>`,
